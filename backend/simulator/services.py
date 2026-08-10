@@ -1,23 +1,23 @@
-import google.generativeai as genai
 import os
-import json
+from ollama import Client
 
 def get_ai_response(session, user_message=None):
     """
-    Génère la réponse de l'IA recruteur ou l'évaluation finale.
+    Génère la réponse de l'IA recruteur via Ollama Cloud.
     """
-    # Récupération de la clé API (soit celle du profil candidat, soit celle du système)
-    profile = getattr(session.user, 'profile', None)
-    api_key = profile.api_key if profile and profile.api_key else os.getenv("GEMINI_API_KEY")
+    api_key = os.getenv("OLLAMA_API_KEY")
 
     if not api_key:
-        return "Erreur : Aucune clé API Gemini n'a été configurée."
+        return "Erreur : Aucune clé API Ollama n'a été configurée."
 
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    # Initialisation du client pointant vers le cloud d'Ollama
+    client = Client(
+        host='https://ollama.com',
+        headers={'Authorization': f"Bearer {api_key}"}
+    )
 
-    # Historique de la conversation
-    messages_history = session.messages.order_by('timestamp')
+    # Construction du contexte système
+    profile = getattr(session.user, 'profile', None)
     context = f"Tu es un recruteur professionnel qui fait passer un entretien pour le poste de : {session.job_title}.\n"
     context += f"Description du poste : {session.job_description}\n\n"
     
@@ -26,16 +26,20 @@ def get_ai_response(session, user_message=None):
 
     context += "Règles : Sois concis, pose UNE SEULE question claire à la fois, et adapte-toi aux réponses du candidat.\n\n"
 
-    prompt = context
+    # Construction de l'historique des messages
+    messages = [{'role': 'system', 'content': context}]
+    messages_history = session.messages.order_by('timestamp')
+    
     for msg in messages_history:
-        role = "Recruteur" if msg.sender == 'RECRUITER' else "Candidat"
-        prompt += f"{role}: {msg.content}\n"
+        role = "assistant" if msg.sender == 'RECRUITER' else "user"
+        messages.append({'role': role, 'content': msg.content})
 
-    if user_message:
-        prompt += f"Candidat: {user_message}\nRecruteur:"
+    if user_message and not messages_history.filter(content=user_message).exists():
+        messages.append({'role': 'user', 'content': user_message})
 
     try:
-        response = model.generate_content(prompt)
-        return response.text.strip()
+        # Appel d'un modèle cloud d'Ollama (par exemple gpt-oss:120b-cloud ou un autre modèle disponible)
+        response = client.chat(model='gpt-oss:120b-cloud', messages=messages)
+        return response['message']['content'].strip()
     except Exception as e:
         return f"Erreur lors de la génération de la réponse IA : {str(e)}"
