@@ -25,6 +25,7 @@ class InterviewSessionSerializer(serializers.ModelSerializer):
     class Meta:
         model = InterviewSession
         fields = ['id', 'user', 'job_title', 'job_description', 'status', 'created_at', 'messages']
+        read_only_fields = ['user']
 
 class EvaluationReportSerializer(serializers.ModelSerializer):
     class Meta:

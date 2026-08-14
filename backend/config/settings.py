@@ -42,6 +42,8 @@ INSTALLED_APPS = [
 
     # Third-party packages
     'rest_framework',
+    'rest_framework.authtoken',  # <--- À AJOUTER
+    'dj_rest_auth',
     'corsheaders',
     'django.contrib.sites',  # Requis par django-allauth
     'allauth',
@@ -144,9 +146,14 @@ CORS_ALLOW_ALL_ORIGINS = True
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
         'rest_framework.authentication.SessionAuthentication',
     ],
 }
+
+# Désactiver la vérification d'email obligatoire pour les tests
+ACCOUNT_EMAIL_VERIFICATION = 'none'
+ACCOUNT_SIGNUP_FIELDS = ['email*', 'username*', 'password1*', 'password2*']
 
 # Configuration Allauth (Google OAuth)
 AUTHENTICATION_BACKENDS = [
