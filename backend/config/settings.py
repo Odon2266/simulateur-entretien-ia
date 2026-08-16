@@ -163,3 +163,23 @@ AUTHENTICATION_BACKENDS = [
 
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
+
+# Configuration Google OAuth pour Allauth
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'SCOPE': [
+            'profile',
+            'email',
+        ],
+        'AUTH_PARAMS': {
+            'access_type': 'online',
+        },
+        'OAUTH_PKCE_ENABLED': True,
+    }
+}
+
+# Configuration dj-rest-auth
+REST_AUTH = {
+    'USE_JWT': False,  # On utilise TokenAuthentication basique d'après ton DRF setup
+    'SESSION_LOGIN': False,
+}
