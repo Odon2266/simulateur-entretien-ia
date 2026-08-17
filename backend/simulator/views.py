@@ -27,7 +27,7 @@ from .services import get_ai_response
 class GoogleLoginView(SocialLoginView):
     """Endpoint pour valider le token Google venant du frontend"""
     adapter_class = GoogleOAuth2Adapter
-    callback_url = "http://localhost:3000"  # URL de ton frontend React
+    callback_url = "http://localhost:5173"  # URL de ton frontend React
     client_class = OAuth2Client
 
 

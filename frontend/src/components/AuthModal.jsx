@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Terminal, Lock, Mail, Eye, EyeOff, ArrowLeft, Shield } from 'lucide-react';
+import { useGoogleLogin } from '@react-oauth/google';
+import axios from 'axios';
 
 export default function AuthModal({ onBack, onLoginSuccess }) {
   const [isLogin, setIsLogin] = useState(true);
@@ -16,19 +18,32 @@ export default function AuthModal({ onBack, onLoginSuccess }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Simuler la connexion/inscription pour le moment
     onLoginSuccess({ email: formData.email });
   };
 
-  const handleGoogleLogin = () => {
-    // Redirection vers l'URL backend Google OAuth définie précédemment
-    window.location.href = 'http://localhost:8000/api/auth/google/';
-  };
+  // Récupération de l'access_token valide auprès de Google
+  const loginWithGoogle = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      try {
+        const response = await axios.post('http://localhost:8000/api/auth/google/', {
+          access_token: tokenResponse.access_token,
+        });
+
+        console.log('Connexion réussie !', response.data);
+        localStorage.setItem('authToken', response.data.key);
+        onLoginSuccess({ email: response.data.user?.email || 'Utilisateur Google' });
+      } catch (error) {
+        console.error('Erreur backend Django :', error.response?.data);
+        alert('Échec de la connexion avec le serveur.');
+      }
+    },
+    onError: (error) => console.error('Échec Google Login :', error),
+  });
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between p-6 selection:bg-indigo-500 selection:text-white">
       
-      {/* Header avec retour */}
+      {/* Header */}
       <div className="max-w-7xl mx-auto w-full flex items-center justify-between">
         <button 
           onClick={onBack}
@@ -77,9 +92,9 @@ export default function AuthModal({ onBack, onLoginSuccess }) {
           </p>
         </div>
 
-        {/* Bouton Google OAuth */}
+        {/* Bouton Google OAuth Personnalisé */}
         <button
-          onClick={handleGoogleLogin}
+          onClick={() => loginWithGoogle()}
           type="button"
           className="w-full bg-slate-950 hover:bg-slate-800 border border-slate-700 text-slate-200 font-medium py-2.5 px-4 rounded-xl flex items-center justify-center gap-3 transition-colors text-xs font-mono mb-6"
         >
@@ -184,7 +199,7 @@ export default function AuthModal({ onBack, onLoginSuccess }) {
         </form>
       </div>
 
-      {/* Footer de sécurité */}
+      {/* Footer */}
       <div className="max-w-md mx-auto text-center flex items-center justify-center gap-2 text-slate-600 text-[11px] font-mono">
         <Shield className="w-3.5 h-3.5 text-emerald-500" />
         <span>Connexion sécurisée par JWT & OAuth 2.0</span>
