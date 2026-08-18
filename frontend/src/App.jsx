@@ -9,7 +9,8 @@ export default function App() {
 
   // Vérification de la session au rechargement de la page
   useEffect(() => {
-    const savedToken = localStorage.getItem('authToken');
+    // On vérifie les deux noms possibles au cas où
+    const savedToken = localStorage.getItem('authToken') || localStorage.getItem('access_token');
     const savedEmail = localStorage.getItem('userEmail');
 
     if (savedToken && savedEmail) {
@@ -28,6 +29,7 @@ export default function App() {
 
   const handleLogout = () => {
     localStorage.removeItem('authToken');
+    localStorage.removeItem('access_token');
     localStorage.removeItem('userEmail');
     setUser(null);
     setCurrentView('landing');
