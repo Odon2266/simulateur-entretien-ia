@@ -22,6 +22,7 @@ export default function AuthModal({ onBack, onLoginSuccess }) {
   };
 
   // Récupération de l'access_token valide auprès de Google
+  // Récupération de l'access_token valide auprès de Google
   const loginWithGoogle = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       try {
@@ -30,8 +31,18 @@ export default function AuthModal({ onBack, onLoginSuccess }) {
         });
 
         console.log('Connexion réussie !', response.data);
+        
+        // 1. Sauvegarde du Token
         localStorage.setItem('authToken', response.data.key);
-        onLoginSuccess({ email: response.data.user?.email || 'Utilisateur Google' });
+        
+        // 2. Sauvegarde des infos utilisateur (contenant le nom SQL)
+        if (response.data.user) {
+          localStorage.setItem('user_info', JSON.stringify(response.data.user));
+        }
+
+        // 3. Appel de la fonction de succès pour rediriger vers le Dashboard
+        onLoginSuccess(response.data.user || { email: 'Utilisateur' });
+        
       } catch (error) {
         console.error('Erreur backend Django :', error.response?.data);
         alert('Échec de la connexion avec le serveur.');

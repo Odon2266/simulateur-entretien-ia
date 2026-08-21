@@ -30,7 +30,27 @@ class GoogleLoginView(SocialLoginView):
     callback_url = "http://localhost:5173"  # URL de ton frontend React
     client_class = OAuth2Client
 
+    def get_response(self):
+        # 1. Laisse dj_rest_auth valider le token et faire l'insertion SQL (User)
+        response = super().get_response()
+        
+        # 2. Récupère l'utilisateur qui vient d'être connecté/créé
+        user = self.user
+        
+        # 3. Sécurité : On s'assure que son CandidateProfile est créé
+        CandidateProfile.objects.get_or_create(user=user)
 
+        # 4. Construction du nom complet depuis la base de données
+        full_name = f"{user.first_name} {user.last_name}".strip() or user.username
+
+        # 5. Injection des données dans la réponse JSON
+        response.data['user'] = {
+            'id': user.id,
+            'email': user.email,
+            'name': full_name,
+        }
+        
+        return response
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def update_ollama_key(request):

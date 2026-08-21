@@ -21,9 +21,16 @@ import OverviewTab from './OverviewTab';
 import PracticeTab from './PracticeTab';
 import HistoryTab from './HistoryTab';
 
-export default function Dashboard({ userEmail = "fidinjaharisoaodon@gmail.com", onLogout }) {
+export default function Dashboard({ user, userEmail = "fidinjaharisoaodon@gmail.com", onLogout }) {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const username = userEmail.split('@')[0];
+
+  // Récupération des informations utilisateur Google (Prop ou LocalStorage)
+  const storedUser = JSON.parse(localStorage.getItem('user_info') || '{}');
+  const currentUser = user || storedUser;
+
+  const displayName = currentUser.name || currentUser.first_name || userEmail.split('@')[0];
+  const email = currentUser.email || userEmail;
+  const avatarUrl = currentUser.picture || currentUser.avatar;
 
   const [sessions, setSessions] = useState([]);
   const [activeSession, setActiveSession] = useState(null);
@@ -168,14 +175,26 @@ export default function Dashboard({ userEmail = "fidinjaharisoaodon@gmail.com", 
 
           <div className="h-4 w-[1px] bg-slate-800 hidden sm:block"></div>
 
+          {/* Profil Utilisateur Google */}
           <div className="flex items-center gap-3">
             <div className="text-right hidden sm:block">
-              <p className="text-xs font-semibold text-slate-200">{username}</p>
-              <p className="text-[10px] text-slate-500">{userEmail}</p>
+              <p className="text-xs font-semibold text-slate-200 capitalize">{displayName}</p>
+              <p className="text-[10px] text-slate-500">{email}</p>
             </div>
-            <div className="w-9 h-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-xs text-cyan-400 shadow-inner">
-              {username[0].toUpperCase()}
-            </div>
+
+            {/* Avatar : Image Google si disponible, sinon Initiale */}
+            {avatarUrl ? (
+              <img 
+                src={avatarUrl} 
+                alt={displayName} 
+                className="w-9 h-9 rounded-xl border border-slate-700 object-cover shadow-inner"
+              />
+            ) : (
+              <div className="w-9 h-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-xs text-cyan-400 shadow-inner">
+                {displayName[0].toUpperCase()}
+              </div>
+            )}
+
             <button 
               onClick={onLogout}
               title="Déconnexion"
@@ -359,7 +378,7 @@ export default function Dashboard({ userEmail = "fidinjaharisoaodon@gmail.com", 
         </main>
       </div>
 
-      {/* --- MODALS --- */}
+      {/* Modals */}
       {showNewModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 space-y-6 shadow-2xl relative">
