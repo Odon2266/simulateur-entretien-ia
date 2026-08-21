@@ -13,7 +13,8 @@ import {
   Key,
   X,
   Loader2,
-  Briefcase
+  Briefcase,
+  Trash2
 } from 'lucide-react';
 import SimulationChat from './SimulationChat';
 import OverviewTab from './OverviewTab';
@@ -38,6 +39,7 @@ export default function Dashboard({ userEmail = "fidinjaharisoaodon@gmail.com", 
   const [isCreating, setIsCreating] = useState(false);
   const [isSavingKey, setIsSavingKey] = useState(false);
   const [statusMessage, setStatusMessage] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
 
   const API_BASE_URL = 'http://localhost:8000/api';
 
@@ -85,6 +87,25 @@ export default function Dashboard({ userEmail = "fidinjaharisoaodon@gmail.com", 
       alert('Impossible de démarrer la session. Vérifiez votre backend et votre clé API.');
     } finally {
       setIsCreating(false);
+    }
+  };
+
+  const handleDeleteSession = async (sessionId, e) => {
+    e.stopPropagation();
+    if (!window.confirm("Êtes-vous sûr de vouloir supprimer cette session ?")) return;
+
+    setDeletingId(sessionId);
+    try {
+      const token = getToken();
+      await axios.delete(`${API_BASE_URL}/sessions/${sessionId}/`, {
+        headers: { Authorization: `Token ${token}` }
+      });
+      setSessions((prev) => prev.filter((s) => s.id !== sessionId));
+    } catch (err) {
+      console.error("Erreur lors de la suppression de la session :", err);
+      alert("Impossible de supprimer la session.");
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -229,6 +250,7 @@ export default function Dashboard({ userEmail = "fidinjaharisoaodon@gmail.com", 
               {activeTab === 'dashboard' && (
                 <OverviewTab 
                   sessions={sessions}
+                  setSessions={setSessions}
                   loadingSessions={loadingSessions}
                   onNewSession={() => setShowNewModal(true)}
                   onSelectSession={(session) => setActiveSession(session)}
@@ -286,7 +308,21 @@ export default function Dashboard({ userEmail = "fidinjaharisoaodon@gmail.com", 
                               <span className="p-2.5 rounded-xl bg-slate-800 text-cyan-400">
                                 <Briefcase className="w-5 h-5" />
                               </span>
-                              <span className="text-[10px] font-mono text-slate-500">ID: #{session.id}</span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-mono text-slate-500">ID: #{session.id}</span>
+                                <button
+                                  onClick={(e) => handleDeleteSession(session.id, e)}
+                                  disabled={deletingId === session.id}
+                                  className="p-1 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors"
+                                  title="Supprimer la session"
+                                >
+                                  {deletingId === session.id ? (
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin text-rose-400" />
+                                  ) : (
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  )}
+                                </button>
+                              </div>
                             </div>
                             <div>
                               <h3 className="font-bold text-white text-base group-hover:text-cyan-300 transition-colors">
@@ -313,6 +349,7 @@ export default function Dashboard({ userEmail = "fidinjaharisoaodon@gmail.com", 
               {activeTab === 'history' && (
                 <HistoryTab 
                   sessions={sessions}
+                  setSessions={setSessions}
                   loadingSessions={loadingSessions}
                   onSelectSession={(session) => setActiveSession(session)}
                 />

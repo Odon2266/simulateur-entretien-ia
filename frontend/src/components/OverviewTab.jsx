@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import axios from 'axios';
 import { 
   PlayCircle, 
   Activity, 
@@ -9,10 +10,47 @@ import {
   Briefcase, 
   CheckCircle2, 
   Mic, 
-  Loader2 
+  Loader2,
+  Trash2
 } from 'lucide-react';
 
-export default function OverviewTab({ sessions, loadingSessions, onNewSession, onSelectSession, onViewAllHistory }) {
+export default function OverviewTab({ 
+  sessions = [], 
+  setSessions, 
+  loadingSessions, 
+  onNewSession, 
+  onSelectSession, 
+  onViewAllHistory 
+}) {
+  const [deletingId, setDeletingId] = useState(null);
+
+  const API_BASE_URL = 'http://localhost:8000/api';
+  const getToken = () => localStorage.getItem('authToken') || localStorage.getItem('access_token');
+
+  // Supprimer une session via l'API et rafraîchir l'état local
+  const handleDeleteSession = async (sessionId, e) => {
+    e.stopPropagation(); // Évite d'ouvrir la session au clic sur la poubelle
+
+    if (!window.confirm("Êtes-vous sûr de vouloir supprimer cette session ?")) return;
+
+    setDeletingId(sessionId);
+    try {
+      const token = getToken();
+      await axios.delete(`${API_BASE_URL}/sessions/${sessionId}/`, {
+        headers: { Authorization: `Token ${token}` }
+      });
+
+      if (setSessions) {
+        setSessions((prev) => prev.filter((s) => s.id !== sessionId));
+      }
+    } catch (err) {
+      console.error("Erreur lors de la suppression de la session :", err);
+      alert("Impossible de supprimer la session.");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   return (
     <>
       {/* Hero Banner */}
@@ -117,19 +155,36 @@ export default function OverviewTab({ sessions, loadingSessions, onNewSession, o
                   onClick={() => onSelectSession(session)}
                   className="group bg-slate-900/80 hover:bg-slate-800 border border-slate-800/80 hover:border-cyan-500/40 p-4 rounded-xl transition-all cursor-pointer flex flex-col justify-between gap-3"
                 >
-                  <div className="flex items-center gap-3">
-                    <span className="p-2 rounded-lg bg-slate-800 text-cyan-400 shrink-0">
-                      <Briefcase className="w-4 h-4" />
-                    </span>
-                    <div className="overflow-hidden">
-                      <h3 className="font-bold text-white text-sm truncate group-hover:text-cyan-300 transition-colors">
-                        {session.job_title}
-                      </h3>
-                      <p className="text-slate-500 text-[10px] truncate">
-                        {session.job_description || 'Sans description'}
-                      </p>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-3 overflow-hidden">
+                      <span className="p-2 rounded-lg bg-slate-800 text-cyan-400 shrink-0">
+                        <Briefcase className="w-4 h-4" />
+                      </span>
+                      <div className="overflow-hidden">
+                        <h3 className="font-bold text-white text-sm truncate group-hover:text-cyan-300 transition-colors">
+                          {session.job_title}
+                        </h3>
+                        <p className="text-slate-500 text-[10px] truncate">
+                          {session.job_description || 'Sans description'}
+                        </p>
+                      </div>
                     </div>
+
+                    {/* Bouton de suppression */}
+                    <button
+                      onClick={(e) => handleDeleteSession(session.id, e)}
+                      disabled={deletingId === session.id}
+                      className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors shrink-0 disabled:opacity-50"
+                      title="Supprimer la session"
+                    >
+                      {deletingId === session.id ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-rose-400" />
+                      ) : (
+                        <Trash2 className="w-3.5 h-3.5" />
+                      )}
+                    </button>
                   </div>
+
                   <div className="flex items-center justify-between text-[10px] text-slate-400 font-mono pt-2 border-t border-slate-800/60">
                     <span>ID: #{session.id}</span>
                     <span className="text-cyan-500 flex items-center gap-1 group-hover:translate-x-1 transition-transform">
