@@ -1,7 +1,9 @@
+import pypdf
 from rest_framework import viewsets, status
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.contrib.auth.models import User
 
 # Imports pour Allauth & Google OAuth
@@ -51,11 +53,12 @@ class GoogleLoginView(SocialLoginView):
         }
         
         return response
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def update_ollama_key(request):
     """Endpoint pour enregistrer/mettre à jour la clé API Ollama personnelle du candidat"""
-    # On s'assure que l'utilisateur a un profil
     profile, created = CandidateProfile.objects.get_or_create(user=request.user)
     api_key = request.data.get('api_key')
     
@@ -68,13 +71,54 @@ def update_ollama_key(request):
 
 
 # ==========================================
-# VIEWSETS SIMULATEUR (SÉCURISÉS)
+# VIEWSETS SIMULATEUR & CV (SÉCURISÉS)
 # ==========================================
 
 class CandidateProfileViewSet(viewsets.ModelViewSet):
     queryset = CandidateProfile.objects.all()
     serializer_class = CandidateProfileSerializer
     permission_classes = [IsAuthenticated]
+    parser_classes = (MultiPartParser, FormParser, JSONParser)
+
+    def get_object(self):
+        profile, _ = CandidateProfile.objects.get_or_create(user=self.request.user)
+        return profile
+
+    @action(detail=False, methods=['post'], parser_classes=[MultiPartParser, FormParser])
+    def upload_cv(self, request):
+        """Endpoint pour téléverser le CV (PDF) et extraire son texte"""
+        profile = self.get_object()
+        cv_file = request.FILES.get('cv_file')
+
+        if not cv_file:
+            return Response({"error": "Aucun fichier CV n'a été fourni."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 1. Sauvegarde du fichier PDF dans le modèle
+        profile.cv_file = cv_file
+
+        # 2. Extraction automatique du texte PDF avec pypdf
+        try:
+            reader = pypdf.PdfReader(cv_file)
+            extracted_text = ""
+            for page in reader.pages:
+                text = page.extract_text()
+                if text:
+                    extracted_text += text + "\n"
+            
+            profile.cv_text = extracted_text.strip()
+            profile.save()
+
+            return Response({
+                "message": "CV téléversé et analysé avec succès !",
+                "profile": CandidateProfileSerializer(profile).data
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            profile.save()
+            return Response({
+                "message": "CV téléversé, mais l'extraction de texte a échoué.",
+                "error": str(e)
+            }, status=status.HTTP_400_BAD_REQUEST)
 
 
 class InterviewSessionViewSet(viewsets.ModelViewSet):

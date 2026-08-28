@@ -14,7 +14,9 @@ import {
   X,
   Loader2,
   Briefcase,
-  Trash2
+  Trash2,
+  Upload,
+  FileText
 } from 'lucide-react';
 import SimulationChat from './SimulationChat';
 import OverviewTab from './OverviewTab';
@@ -41,6 +43,7 @@ export default function Dashboard({ user, userEmail = "fidinjaharisoaodon@gmail.
   
   const [jobTitle, setJobTitle] = useState('');
   const [jobDescription, setJobDescription] = useState('');
+  const [cvFile, setCvFile] = useState(null);
   const [apiKey, setApiKey] = useState('');
   
   const [isCreating, setIsCreating] = useState(false);
@@ -70,6 +73,16 @@ export default function Dashboard({ user, userEmail = "fidinjaharisoaodon@gmail.
     fetchSessions();
   }, []);
 
+  // Validation du fichier CV (PDF uniquement)
+  const handleCvChange = (e) => {
+    const file = e.target.files[0];
+    if (file && file.type === 'application/pdf') {
+      setCvFile(file);
+    } else if (file) {
+      alert('Veuillez sélectionner un fichier au format PDF.');
+    }
+  };
+
   const handleCreateSession = async (e) => {
     e.preventDefault();
     if (!jobTitle.trim()) return;
@@ -77,6 +90,21 @@ export default function Dashboard({ user, userEmail = "fidinjaharisoaodon@gmail.
     setIsCreating(true);
     try {
       const token = getToken();
+
+      // Étape A : Téléversement du CV vers l'endpoint profil si un fichier est sélectionné
+      if (cvFile) {
+        const formData = new FormData();
+        formData.append('cv_file', cvFile);
+
+        await axios.post(`${API_BASE_URL}/profiles/upload_cv/`, formData, {
+          headers: {
+            Authorization: `Token ${token}`,
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+      }
+
+      // Étape B : Création de la session d'entretien
       const res = await axios.post(
         `${API_BASE_URL}/sessions/`,
         { job_title: jobTitle, job_description: jobDescription },
@@ -86,6 +114,7 @@ export default function Dashboard({ user, userEmail = "fidinjaharisoaodon@gmail.
       setShowNewModal(false);
       setJobTitle('');
       setJobDescription('');
+      setCvFile(null);
       
       setSessions([res.data, ...sessions]);
       setActiveSession(res.data);
@@ -182,7 +211,6 @@ export default function Dashboard({ user, userEmail = "fidinjaharisoaodon@gmail.
               <p className="text-[10px] text-slate-500">{email}</p>
             </div>
 
-            {/* Avatar : Image Google si disponible, sinon Initiale */}
             {avatarUrl ? (
               <img 
                 src={avatarUrl} 
@@ -378,7 +406,7 @@ export default function Dashboard({ user, userEmail = "fidinjaharisoaodon@gmail.
         </main>
       </div>
 
-      {/* Modals */}
+      {/* Modal Nouvel Entretien avec Upload CV */}
       {showNewModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 space-y-6 shadow-2xl relative">
@@ -391,10 +419,35 @@ export default function Dashboard({ user, userEmail = "fidinjaharisoaodon@gmail.
 
             <div className="space-y-1">
               <h3 className="text-lg font-bold text-white">Nouvel Entretien</h3>
-              <p className="text-xs text-slate-400">Définissez le poste pour adapter les questions de l'IA.</p>
+              <p className="text-xs text-slate-400">Ajoutez votre CV et le poste pour adapter les questions de l'IA.</p>
             </div>
 
             <form onSubmit={handleCreateSession} className="space-y-4">
+              {/* Zone d'upload du CV (PDF) */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-300">Votre CV (Optionnel, format PDF)</label>
+                <div className="border border-dashed border-slate-800 hover:border-cyan-500/50 rounded-xl p-3 transition-colors bg-slate-950/50 flex flex-col items-center justify-center text-center cursor-pointer relative">
+                  <input 
+                    type="file" 
+                    accept=".pdf"
+                    onChange={handleCvChange}
+                    className="absolute inset-0 opacity-0 cursor-pointer"
+                  />
+                  {cvFile ? (
+                    <div className="flex items-center gap-2 text-cyan-400 font-medium text-xs">
+                      <FileText className="w-4 h-4" />
+                      <span className="truncate max-w-[200px]">{cvFile.name}</span>
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 ml-1" />
+                    </div>
+                  ) : (
+                    <div className="space-y-1 text-slate-400">
+                      <Upload className="w-5 h-5 mx-auto text-slate-500" />
+                      <p className="text-xs">Glissez votre CV PDF ici ou <span className="text-cyan-400 underline">parcourez</span></p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-slate-300">Intitulé du poste *</label>
                 <input
@@ -410,18 +463,18 @@ export default function Dashboard({ user, userEmail = "fidinjaharisoaodon@gmail.
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-slate-300">Description / Exigences du poste</label>
                 <textarea
-                  rows={4}
+                  rows={3}
                   placeholder="Collez ici la fiche de poste ou les compétences clés recherchées..."
                   value={jobDescription}
                   onChange={(e) => setJobDescription(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-sm text-white focus:outline-none focus:border-cyan-500 resize-none"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-cyan-500 resize-none"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={isCreating}
-                className="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50"
+                className="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50 cursor-pointer"
               >
                 {isCreating ? (
                   <>
@@ -437,6 +490,7 @@ export default function Dashboard({ user, userEmail = "fidinjaharisoaodon@gmail.
         </div>
       )}
 
+      {/* Modal Clé Ollama */}
       {showKeyModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 space-y-6 shadow-2xl relative">
@@ -479,7 +533,7 @@ export default function Dashboard({ user, userEmail = "fidinjaharisoaodon@gmail.
               <button
                 type="submit"
                 disabled={isSavingKey}
-                className="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50"
+                className="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50 cursor-pointer"
               >
                 {isSavingKey ? (
                   <>

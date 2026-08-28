@@ -24,10 +24,8 @@ export default function SimulationChat({ sessionData, onBack }) {
   const recognitionRef = useRef(null);
 
   const API_BASE_URL = 'http://localhost:8000/api';
-
   const getToken = () => localStorage.getItem('authToken') || localStorage.getItem('access_token');
 
-  // Défiler automatiquement vers le bas
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -36,7 +34,7 @@ export default function SimulationChat({ sessionData, onBack }) {
     scrollToBottom();
   }, [messages, loading]);
 
-  // Configuration de la reconnaissance vocale (Speech-to-Text)
+  // Configuration de la reconnaissance vocale
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
@@ -57,11 +55,11 @@ export default function SimulationChat({ sessionData, onBack }) {
     }
   }, []);
 
-  // Synthèse vocale (Text-to-Speech)
+  // Synthèse vocale
   const speakText = (text) => {
     if (!('speechSynthesis' in window)) return;
 
-    window.speechSynthesis.cancel(); // Arrêter toute lecture précédente
+    window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'fr-FR';
     utterance.rate = 1.0;
@@ -90,13 +88,13 @@ export default function SimulationChat({ sessionData, onBack }) {
       recognitionRef.current.stop();
       setIsListening(false);
     } else {
-      stopSpeaking();
+      stopSpeaking(); // Arrêter l'IA si elle parle
       recognitionRef.current.start();
       setIsListening(true);
     }
   };
 
-  // Charger l'historique des messages
+  // Chargement de l'historique des messages
   useEffect(() => {
     const fetchSessionMessages = async () => {
       if (!sessionData?.id) return;
@@ -112,8 +110,16 @@ export default function SimulationChat({ sessionData, onBack }) {
           headers: { Authorization: `Token ${token}` }
         });
         
-        if (res.data && res.data.messages) {
+        if (res.data && res.data.messages && res.data.messages.length > 0) {
           setMessages(res.data.messages);
+        } else {
+          // Premier message par défaut si l'historique est vide
+          const welcomeMessage = {
+            sender: 'RECRUITER',
+            content: `Bonjour ! Je suis prêt pour l'entretien concernant le poste de ${sessionData?.job_title || 'développeur'}. Présentez-vous lorsque vous êtes prêt.`
+          };
+          setMessages([welcomeMessage]);
+          if (mode === 'voice') speakText(welcomeMessage.content);
         }
       } catch (err) {
         console.error("Erreur lors de la récupération des messages :", err);
@@ -123,24 +129,22 @@ export default function SimulationChat({ sessionData, onBack }) {
     fetchSessionMessages();
   }, [sessionData]);
 
-  // Fonction centrale d'envoi de message
-  const handleSend = async (e) => {
-    if (e) e.preventDefault();
-    if (!input.trim() || loading) return;
+  // Envoi de message
+  const handleSend = async (overrideText = null) => {
+    const textToSend = overrideText || input;
+    if (!textToSend.trim() || loading) return;
 
-    const userText = input;
     setInput('');
     stopSpeaking();
     
-    setMessages((prev) => [...prev, { sender: 'CANDIDATE', content: userText }]);
+    setMessages((prev) => [...prev, { sender: 'CANDIDATE', content: textToSend }]);
     setLoading(true);
 
     try {
       const token = getToken();
-      
       const res = await axios.post(
         `${API_BASE_URL}/sessions/${sessionData.id}/send_message/`,
-        { content: userText },
+        { content: textToSend },
         { 
           headers: { 
             Authorization: `Token ${token}`,
@@ -161,7 +165,6 @@ export default function SimulationChat({ sessionData, onBack }) {
         }
       }
 
-      // Déclenchement de la voix si le mode vocal est actif
       if (mode === 'voice' && aiResponseText) {
         speakText(aiResponseText);
       }
@@ -178,16 +181,21 @@ export default function SimulationChat({ sessionData, onBack }) {
     }
   };
 
+  const handleSubmitForm = (e) => {
+    e.preventDefault();
+    handleSend();
+  };
+
   return (
     <div className="flex flex-col h-[75vh] bg-slate-900/40 border border-slate-800 rounded-2xl overflow-hidden mt-2">
       
-      {/* En-tête du Chat */}
+      {/* En-tête */}
       <div className="p-4 bg-slate-900 border-b border-slate-800 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button 
             onClick={() => { stopSpeaking(); onBack(); }} 
             className="p-2 text-slate-400 hover:text-white rounded-xl bg-slate-800/50 hover:bg-slate-800 transition-colors"
-            title="Retour au tableau de bord"
+            title="Retour"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
@@ -200,7 +208,7 @@ export default function SimulationChat({ sessionData, onBack }) {
           </div>
         </div>
 
-        {/* Commutateur Mode Écrit / Mode Vocal */}
+        {/* Switch Écrit / Vocal */}
         <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
           <button
             type="button"
@@ -230,14 +238,8 @@ export default function SimulationChat({ sessionData, onBack }) {
         </div>
       </div>
 
-      {/* Zone d'affichage des messages */}
+      {/* Zone de conversation */}
       <div className="flex-1 p-6 overflow-y-auto space-y-6">
-        {messages.length === 0 && !loading && (
-          <div className="text-center text-slate-500 text-sm mt-10">
-            Envoyez votre premier message ou utilisez le micro pour lancer l'entretien.
-          </div>
-        )}
-
         {messages.map((msg, idx) => {
           const isUser = msg.sender === 'CANDIDATE' || msg.sender === 'USER';
           return (
@@ -245,14 +247,12 @@ export default function SimulationChat({ sessionData, onBack }) {
               key={idx}
               className={`flex items-start gap-4 ${isUser ? 'flex-row-reverse' : ''}`}
             >
-              {/* Avatar */}
               <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
                 isUser ? 'bg-cyan-500 text-slate-950' : 'bg-slate-800 border border-slate-700 text-cyan-400'
               }`}>
                 {isUser ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
               </div>
               
-              {/* Bulle de message */}
               <div className={`max-w-[80%] p-4 rounded-2xl text-sm leading-relaxed shadow-sm ${
                 isUser
                   ? 'bg-cyan-500/10 border border-cyan-500/20 text-cyan-50 rounded-tr-none'
@@ -264,7 +264,6 @@ export default function SimulationChat({ sessionData, onBack }) {
           );
         })}
 
-        {/* Indicateur de chargement IA */}
         {loading && (
           <div className="flex items-center gap-3">
              <div className="w-8 h-8 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-cyan-400 shrink-0">
@@ -280,12 +279,11 @@ export default function SimulationChat({ sessionData, onBack }) {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Pied de page : Saisie conditionnelle en fonction du Mode */}
+      {/* Saisie / Micro */}
       <div className="p-4 bg-slate-900 border-t border-slate-800">
         {mode === 'voice' ? (
           <div className="flex flex-col items-center justify-center py-2 space-y-3">
             <div className="flex items-center gap-4">
-              {/* Bouton Enregistrement Vocal */}
               <button
                 type="button"
                 onClick={toggleListening}
@@ -300,13 +298,12 @@ export default function SimulationChat({ sessionData, onBack }) {
                 {isListening ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
               </button>
 
-              {/* Bouton d'interruption de la voix de l'IA */}
               {isSpeaking && (
                 <button
                   type="button"
                   onClick={stopSpeaking}
                   className="p-3 bg-slate-800 hover:bg-slate-700 text-amber-400 rounded-full border border-slate-700 transition-colors"
-                  title="Interrompre la voix du recruteur"
+                  title="Interrompre la voix"
                 >
                   <VolumeX className="w-5 h-5" />
                 </button>
@@ -318,10 +315,9 @@ export default function SimulationChat({ sessionData, onBack }) {
                 ? 'Écoute en cours... Parlez clairement.'
                 : isSpeaking
                 ? "Le recruteur IA parle..."
-                : 'Cliquez sur le micro pour répondre à voix haute.'}
+                : 'Cliquez sur le micro pour répondre.'}
             </p>
 
-            {/* Aperçu et envoi du texte reconnu à l'oral */}
             {input && (
               <div className="w-full flex items-center gap-2 bg-slate-950 p-2 rounded-xl border border-slate-800 mt-2">
                 <p className="flex-1 text-xs text-slate-300 italic px-2 truncate">"{input}"</p>
@@ -337,8 +333,7 @@ export default function SimulationChat({ sessionData, onBack }) {
             )}
           </div>
         ) : (
-          /* Saisie classique en Mode Écrit */
-          <form onSubmit={handleSend} className="flex gap-3">
+          <form onSubmit={handleSubmitForm} className="flex gap-3">
             <input
               type="text"
               value={input}

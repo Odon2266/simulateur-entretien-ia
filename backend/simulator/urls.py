@@ -10,13 +10,13 @@ from .views import (
 )
 
 router = DefaultRouter()
-router.register(r'profiles', CandidateProfileViewSet)
-router.register(r'sessions', InterviewSessionViewSet)
-router.register(r'messages', MessageViewSet)
-router.register(r'reports', EvaluationReportViewSet)
+router.register(r'profiles', CandidateProfileViewSet, basename='profile')
+router.register(r'sessions', InterviewSessionViewSet, basename='session')
+router.register(r'messages', MessageViewSet, basename='message')
+router.register(r'reports', EvaluationReportViewSet, basename='report')
 
 urlpatterns = [
-    # Routes du Router DRF (profiles, sessions, messages, reports)
+    # Routes du Router DRF (ex: /api/profiles/upload_cv/, /api/sessions/, etc.)
     path('', include(router.urls)),
     
     # Endpoint pour se connecter avec Google
