@@ -1,7 +1,14 @@
-import React from 'react';
-import { Dumbbell, CheckCircle2 } from 'lucide-react';
+import React, { useState } from 'react';
+import QuickQuiz from './QuizPractice'; // Composant qui affichera les questions du backend
 
 export default function PracticeTab() {
+  const [activeQuiz, setActiveQuiz] = useState(null); // 'technical' | 'system-design' | null
+
+  // Si un quiz est sélectionné, on affiche l'interface du test
+  if (activeQuiz === 'technical') {
+    return <QuickQuiz onBack={() => setActiveQuiz(null)} />;
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -10,28 +17,28 @@ export default function PracticeTab() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-slate-900/40 border border-slate-800 p-6 rounded-2xl space-y-3">
-          <div className="p-3 bg-cyan-500/10 border border-cyan-500/20 rounded-xl text-cyan-400 w-fit">
-            <Dumbbell className="w-6 h-6" />
+        {/* Carte Test Technique */}
+        <div className="bg-slate-900/60 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between">
+          <div className="space-y-3">
+            <h3 className="font-bold text-white">Questions Techniques Rapides</h3>
+            <p className="text-slate-400 text-xs">Séries de questions à choix multiples sur React, Node.js, Python et BD.</p>
           </div>
-          <h3 className="font-bold text-white text-sm">Questions Techniques Rapides</h3>
-          <p className="text-xs text-slate-400 leading-relaxed">
-            Séries de questions à choix multiples et synthèses rapides sur React, Node.js, Python et bases de données.
-          </p>
-          <span className="inline-block text-[10px] font-mono text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-md">
-            Bientôt disponible
-          </span>
+          
+          <button
+            onClick={() => setActiveQuiz('technical')}
+            className="mt-4 w-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold py-2.5 rounded-xl transition-all"
+          >
+            Commencer le test
+          </button>
         </div>
 
-        <div className="bg-slate-900/40 border border-slate-800 p-6 rounded-2xl space-y-3">
-          <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400 w-fit">
-            <CheckCircle2 className="w-6 h-6" />
+        {/* Carte System Design */}
+        <div className="bg-slate-900/60 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between opacity-60">
+          <div className="space-y-3">
+            <h3 className="font-bold text-white">System Design & Architecture</h3>
+            <p className="text-slate-400 text-xs">Cas pratiques sur la conception de systèmes distribués.</p>
           </div>
-          <h3 className="font-bold text-white text-sm">System Design & Architecture</h3>
-          <p className="text-xs text-slate-400 leading-relaxed">
-            Cas pratiques sur la conception de systèmes distribués, bases de données et microservices.
-          </p>
-          <span className="inline-block text-[10px] font-mono text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-md">
+          <span className="mt-4 inline-block text-center bg-slate-800 text-slate-500 text-xs py-2 rounded-xl font-medium">
             Bientôt disponible
           </span>
         </div>

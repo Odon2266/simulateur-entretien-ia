@@ -1,5 +1,8 @@
+import json
+import requests
 import pypdf
 from rest_framework import viewsets, status
+from rest_framework.views import APIView
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -68,6 +71,65 @@ def update_ollama_key(request):
     profile.api_key = api_key
     profile.save()
     return Response({"message": "Clé API Ollama enregistrée avec succès !"}, status=status.HTTP_200_OK)
+
+
+# ==========================================
+# GENERATION DE QUIZ TECHNIQUE (OLLAMA)
+# ==========================================
+
+class QuizGenerateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        category = request.query_params.get('category', 'react')
+
+        prompt = f"""
+Generates 5 multiple choice technical questions about '{category}'.
+Return ONLY a valid JSON array without markdown syntax or formatting wrappers.
+Each item in the array must match this exact format:
+[
+  {{
+    "id": 1,
+    "question": "Question text in French?",
+    "options": ["Option 1", "Option 2", "Option 3", "Option 4"],
+    "correctIndex": 0,
+    "explanation": "Explanation in French."
+  }}
+]
+"""
+
+        try:
+            # Appel vers le service Ollama local
+            response = requests.post(
+                'http://localhost:11434/api/generate',
+                json={
+                    "model": "mistral",
+                    "prompt": prompt,
+                    "stream": False
+                },
+                timeout=30
+            )
+
+            raw_text = response.json().get('response', '')
+            
+            # Nettoyage du formatage Markdown JSON éventuel généré par le modèle
+            cleaned_text = raw_text.strip()
+            if cleaned_text.startswith("```json"):
+                cleaned_text = cleaned_text[7:]
+            if cleaned_text.startswith("```"):
+                cleaned_text = cleaned_text[3:]
+            if cleaned_text.endswith("```"):
+                cleaned_text = cleaned_text[:-3]
+
+            questions = json.loads(cleaned_text.strip())
+            return Response(questions, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            print(f"Erreur lors de la génération du quiz: {e}")
+            return Response(
+                {"error": "Impossible de générer le quiz avec Ollama."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 # ==========================================

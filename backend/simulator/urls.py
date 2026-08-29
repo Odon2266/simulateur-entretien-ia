@@ -6,12 +6,13 @@ from .views import (
     MessageViewSet,
     EvaluationReportViewSet,
     GoogleLoginView,
-    update_ollama_key
+    update_ollama_key,
+    QuizGenerateView
 )
 
 router = DefaultRouter()
 router.register(r'profiles', CandidateProfileViewSet, basename='profile')
-router.register(r'sessions', InterviewSessionViewSet, basename='session')
+router.register(r'sessions', InterviewSessionViewSet, basename='session') # Ligne corrigée
 router.register(r'messages', MessageViewSet, basename='message')
 router.register(r'reports', EvaluationReportViewSet, basename='report')
 
@@ -24,4 +25,7 @@ urlpatterns = [
     
     # Endpoint pour mettre à jour la clé API Ollama du candidat
     path('profile/update-key/', update_ollama_key, name='update_ollama_key'),
+
+    # Endpoint pour générer les questions QCM via Ollama
+    path('quiz/', QuizGenerateView.as_view(), name='quiz_generate'),
 ]
