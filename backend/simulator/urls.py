@@ -7,7 +7,8 @@ from .views import (
     EvaluationReportViewSet,
     GoogleLoginView,
     update_ollama_key,
-    QuizGenerateView
+    QuizGenerateView,
+    PracticeResultViewSet
 )
 
 router = DefaultRouter()
@@ -15,6 +16,7 @@ router.register(r'profiles', CandidateProfileViewSet, basename='profile')
 router.register(r'sessions', InterviewSessionViewSet, basename='session') # Ligne corrigée
 router.register(r'messages', MessageViewSet, basename='message')
 router.register(r'reports', EvaluationReportViewSet, basename='report')
+router.register(r'practice-results', PracticeResultViewSet, basename='practice-result')
 
 urlpatterns = [
     # Routes du Router DRF (ex: /api/profiles/upload_cv/, /api/sessions/, etc.)

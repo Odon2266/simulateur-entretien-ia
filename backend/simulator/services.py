@@ -1,6 +1,6 @@
 import json
 from ollama import Client
-
+import random
 
 def build_system_prompt(session):
     """Construit le prompt système pour l'IA en intégrant le CV et l'offre d'emploi"""
@@ -63,9 +63,8 @@ def get_ai_response(session, user_message=None):
     except Exception as e:
         return f"Erreur lors de la communication avec Ollama : {str(e)}"
 
-
-def generate_quiz_with_ai(user, category='react'):
-    """Génère un QCM technique dynamique de 5 questions via Ollama avec la clé API utilisateur"""
+def generate_quiz_with_ai(user, category='react', count=20):
+    """Génère un QCM technique dynamique de questions à choix multiples via Ollama"""
     profile = getattr(user, 'profile', None)
     user_api_key = profile.api_key if profile else None
 
@@ -77,24 +76,27 @@ def generate_quiz_with_ai(user, category='react'):
         headers={'Authorization': f"Bearer {user_api_key}"}
     )
 
-    prompt = f"""
-Génère un QCM technique de 5 questions à choix multiples sur le sujet : '{category}'.
-Réponds EXCLUSIVEMENT sous la forme d'un tableau JSON valide, sans texte d'introduction ni balises Markdown.
+    # Ajout d'une graine d'aléatoire pour forcer la diversité
+    random_seed = random.randint(1000, 9999)
 
-Chaque élément du tableau doit respecter strictement ce format :
+    prompt = f"""
+Génère une série aléatoire de {count} questions techniques à choix multiples sur le thème : '{category}'.
+Graine de variabilité : {random_seed}. Diversifie les sujets (du niveau débutant à avancé).
+
+Réponds EXCLUSIVEMENT sous la forme d'un tableau JSON valide (JSON pur), sans markdown :
 [
   {{
     "id": 1,
-    "question": "Texte de la question en français ?",
+    "question": "Intitulé de la question en français ?",
     "options": ["Option 1", "Option 2", "Option 3", "Option 4"],
     "correctIndex": 0,
-    "explanation": "Explication claire et concise en français."
+    "explanation": "Explication courte en français."
   }}
 ]
 """
 
     messages = [
-        {'role': 'system', 'content': 'Tu es un générateur de QCM techniques. Réponds uniquement au format JSON pur.'},
+        {'role': 'system', 'content': 'Tu es un générateur de QCM techniques. Réponds uniquement en JSON pur sans texte additionnel.'},
         {'role': 'user', 'content': prompt}
     ]
 
@@ -107,7 +109,6 @@ Chaque élément du tableau doit respecter strictement ce format :
     else:
         raw_text = str(response)
 
-    # Nettoyage d'éventuels blocs markdown ```json ... ```
     cleaned_text = raw_text.strip()
     if cleaned_text.startswith("```json"):
         cleaned_text = cleaned_text[7:]

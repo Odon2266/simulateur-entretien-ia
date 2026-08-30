@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { 
   CheckCircle2, 
@@ -31,7 +31,33 @@ export default function QuizPractice({ onBack }) {
   const API_BASE_URL = 'http://localhost:8000/api';
   const getToken = () => localStorage.getItem('authToken') || localStorage.getItem('access_token');
 
-  // Lancement du quiz (Récupération depuis l'API ou fallback local)
+  // Sauvegarde automatique du résultat dans la base de données à la fin du quiz
+  useEffect(() => {
+    if (isQuizFinished && selectedCategory && questions.length > 0) {
+      const saveResult = async () => {
+        try {
+          const token = getToken();
+          await axios.post(
+            `${API_BASE_URL}/practice-results/`,
+            {
+              category: selectedCategory.name,
+              score: score,
+              total_questions: questions.length,
+            },
+            {
+              headers: { Authorization: `Token ${token}` }
+            }
+          );
+        } catch (err) {
+          console.error("Erreur lors de l'enregistrement du score d'entraînement :", err);
+        }
+      };
+
+      saveResult();
+    }
+  }, [isQuizFinished]);
+
+  // Lancement du quiz avec 20 questions
   const startQuiz = async (category) => {
     setSelectedCategory(category);
     setLoading(true);
@@ -43,7 +69,8 @@ export default function QuizPractice({ onBack }) {
 
     try {
       const token = getToken();
-      const res = await axios.get(`${API_BASE_URL}/quiz/?category=${category.id}`, {
+      // Demande 20 questions via le paramètre count=20
+      const res = await axios.get(`${API_BASE_URL}/quiz/?category=${encodeURIComponent(category.name)}&count=20`, {
         headers: { Authorization: `Token ${token}` }
       });
       setQuestions(res.data);
@@ -77,7 +104,7 @@ export default function QuizPractice({ onBack }) {
   };
 
   const handleSelectOption = (index) => {
-    if (showExplanation) return; // Empêcher d'altérer la réponse après validation
+    if (showExplanation) return;
     setSelectedOption(index);
   };
 
@@ -118,7 +145,7 @@ export default function QuizPractice({ onBack }) {
                   <h3 className="font-bold text-white text-base group-hover:text-cyan-300 transition-colors">
                     {cat.name}
                   </h3>
-                  <p className="text-xs text-slate-400">5 à 10 questions à choix multiples</p>
+                  <p className="text-xs text-slate-400">20 questions aléatoires à choix multiples</p>
                 </div>
                 <div className={`w-10 h-10 rounded-xl bg-gradient-to-tr ${cat.color} flex items-center justify-center text-slate-950 font-bold shrink-0 shadow-lg`}>
                   <BookOpen className="w-5 h-5 text-slate-950" />
@@ -133,7 +160,7 @@ export default function QuizPractice({ onBack }) {
       {loading && (
         <div className="flex flex-col items-center justify-center py-20 text-slate-400">
           <Loader2 className="w-8 h-8 animate-spin text-cyan-400 mb-3" />
-          <p className="text-sm">Génération des questions techniques...</p>
+          <p className="text-sm">Génération de 20 questions techniques avec l'IA...</p>
         </div>
       )}
 

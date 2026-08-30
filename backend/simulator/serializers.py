@@ -1,7 +1,7 @@
 # backend/simulator/serializers.py
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import CandidateProfile, InterviewSession, Message, EvaluationReport
+from .models import CandidateProfile, InterviewSession, Message, EvaluationReport,PracticeResult
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -42,3 +42,8 @@ class InterviewSessionSerializer(serializers.ModelSerializer):
         model = InterviewSession
         fields = ['id', 'user', 'job_title', 'job_description', 'status', 'created_at', 'messages', 'report']
         read_only_fields = ['id', 'user', 'status', 'created_at']
+
+class PracticeResultSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PracticeResult
+        fields = ['id', 'category', 'score', 'total_questions', 'created_at']

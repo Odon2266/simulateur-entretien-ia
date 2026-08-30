@@ -12,13 +12,14 @@ from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
 from allauth.socialaccount.providers.oauth2.client import OAuth2Client
 from dj_rest_auth.registration.views import SocialLoginView
 
-from .models import CandidateProfile, InterviewSession, Message, EvaluationReport
+from .models import CandidateProfile, InterviewSession, Message, EvaluationReport,PracticeResult
 from .serializers import (
     UserSerializer,
     CandidateProfileSerializer,
     InterviewSessionSerializer,
     MessageSerializer,
-    EvaluationReportSerializer
+    EvaluationReportSerializer,
+    PracticeResultSerializer
 )
 from .services import get_ai_response, generate_quiz_with_ai
 
@@ -74,25 +75,30 @@ def update_ollama_key(request):
 # ==========================================
 # GENERATION DE QUIZ TECHNIQUE (OLLAMA)
 # ==========================================
+class PracticeResultViewSet(viewsets.ModelViewSet):
+    serializer_class = PracticeResultSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return PracticeResult.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
 
 class QuizGenerateView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        category = request.query_params.get('category', 'React, Node.js et bases de données')
+        category = request.query_params.get('category', 'React & Frontend')
+        count = int(request.query_params.get('count', 20))
 
         try:
-            questions = generate_quiz_with_ai(request.user, category)
+            questions = generate_quiz_with_ai(request.user, category=category, count=count)
             return Response(questions, status=status.HTTP_200_OK)
         except ValueError as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            print(f"Erreur lors de la génération du quiz: {e}")
-            return Response(
-                {"error": f"Impossible de générer le quiz avec l'IA : {str(e)}"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-
+            return Response({"error": f"Erreur de génération : {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # ==========================================
 # VIEWSETS SIMULATEUR & CV (SÉCURISÉS)

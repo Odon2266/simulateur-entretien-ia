@@ -58,3 +58,16 @@ class EvaluationReport(models.Model):
 
     def __str__(self):
         return f"Rapport pour {self.session.job_title} - Score: {self.score}/100"
+
+class PracticeResult(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='practice_results')
+    category = models.CharField(max_length=100)
+    score = models.IntegerField()
+    total_questions = models.IntegerField(default=20)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.user.username} - {self.category} : {self.score}/{self.total_questions}"
