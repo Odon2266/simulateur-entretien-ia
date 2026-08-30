@@ -1,42 +1,5 @@
+import json
 from ollama import Client
-
-def get_ai_response(session, user_message=None):
-    # 1. Récupération de la clé API propre à l'utilisateur
-    profile = getattr(session.user, 'profile', None)
-    user_api_key = profile.api_key if profile else None
-
-    if not user_api_key:
-        return "Erreur : Aucune clé API Ollama n'est configurée pour votre compte. Veuillez renseigner votre clé dans vos paramètres."
-
-    # 2. Instanciation du client Ollama Cloud
-    client = Client(
-        host='https://ollama.com',
-        headers={'Authorization': f"Bearer {user_api_key}"}
-    )
-
-    # 3. Construction du prompt système et de l'historique
-    messages = [
-        {
-            'role': 'system',
-            'content': (
-                f"Tu es un recruteur professionnel qui fait passer un entretien d'embauche pour le poste de : {session.job_title}. "
-                f"Description du poste : {session.job_description}. "
-                "Sois concis, pose une seule question à la fois, et réagis directement aux réponses du candidat de manière réaliste."
-            )
-        }
-    ]
-
-    # Récupération de tous les messages déjà enregistrés dans la session (y compris le dernier)
-    for msg in session.messages.order_by('timestamp'):
-        role = 'user' if msg.sender == 'CANDIDATE' else 'assistant'
-        messages.append({'role': role, 'content': msg.content})
-
-    try:
-        response = client.chat(model='gpt-oss:120b-cloud', messages=messages)
-        return response['message']['content'].strip()
-    except Exception as e:
-        return f"Erreur lors de la communication avec Ollama : {str(e)}"
-
 
 
 def build_system_prompt(session):
@@ -63,14 +26,94 @@ Fiche de poste : {session.job_description}
 
 
 def get_ai_response(session, user_message=None):
-    """Génère la réponse de l'IA (Simulé ou via appel Ollama/Gemini)"""
+    """Génère la réponse de l'IA pour la simulation d'entretien"""
+    # 1. Récupération de la clé API propre à l'utilisateur
+    profile = getattr(session.user, 'profile', None)
+    user_api_key = profile.api_key if profile else None
+
+    if not user_api_key:
+        return "Erreur : Aucune clé API Ollama n'est configurée pour votre compte. Veuillez renseigner votre clé dans l'en-tête de l'application."
+
+    # 2. Instanciation du client Ollama Cloud
+    client = Client(
+        host='https://ollama.com',
+        headers={'Authorization': f"Bearer {user_api_key}"}
+    )
+
+    # 3. Construction du prompt système enrichi avec le CV
     system_prompt = build_system_prompt(session)
-    
-    # Si vous utilisez Ollama / OpenRouter / LangChain, insérez l'appel d'API ici.
-    # Pour l'instant, voici une logique de base :
-    
-    if not user_message:
-        return f"Bonjour ! Ravi de vous rencontrer pour ce poste de {session.job_title}. Pour commencer, pouvez-vous vous présenter brièvement en lien avec cette offre ?"
-    
-    # Exemple de réponse générique (à remplacer par votre appel LLM)
-    return f"Merci pour votre réponse. Au vu de votre expérience et des exigences du poste de {session.job_title}, pouvez-vous me détailler un projet technique similaire que vous avez mené ?"
+    messages = [
+        {'role': 'system', 'content': system_prompt}
+    ]
+
+    # 4. Historique de la conversation
+    for msg in session.messages.order_by('timestamp'):
+        role = 'user' if msg.sender == 'CANDIDATE' else 'assistant'
+        messages.append({'role': role, 'content': msg.content})
+
+    try:
+        response = client.chat(model='gpt-oss:120b-cloud', messages=messages)
+
+        if isinstance(response, dict):
+            return response['message']['content'].strip()
+        elif hasattr(response, 'message'):
+            return response.message.content.strip()
+        return str(response)
+
+    except Exception as e:
+        return f"Erreur lors de la communication avec Ollama : {str(e)}"
+
+
+def generate_quiz_with_ai(user, category='react'):
+    """Génère un QCM technique dynamique de 5 questions via Ollama avec la clé API utilisateur"""
+    profile = getattr(user, 'profile', None)
+    user_api_key = profile.api_key if profile else None
+
+    if not user_api_key:
+        raise ValueError("Aucune clé API Ollama n'est configurée pour votre compte.")
+
+    client = Client(
+        host='https://ollama.com',
+        headers={'Authorization': f"Bearer {user_api_key}"}
+    )
+
+    prompt = f"""
+Génère un QCM technique de 5 questions à choix multiples sur le sujet : '{category}'.
+Réponds EXCLUSIVEMENT sous la forme d'un tableau JSON valide, sans texte d'introduction ni balises Markdown.
+
+Chaque élément du tableau doit respecter strictement ce format :
+[
+  {{
+    "id": 1,
+    "question": "Texte de la question en français ?",
+    "options": ["Option 1", "Option 2", "Option 3", "Option 4"],
+    "correctIndex": 0,
+    "explanation": "Explication claire et concise en français."
+  }}
+]
+"""
+
+    messages = [
+        {'role': 'system', 'content': 'Tu es un générateur de QCM techniques. Réponds uniquement au format JSON pur.'},
+        {'role': 'user', 'content': prompt}
+    ]
+
+    response = client.chat(model='gpt-oss:120b-cloud', messages=messages)
+
+    if isinstance(response, dict):
+        raw_text = response['message']['content'].strip()
+    elif hasattr(response, 'message'):
+        raw_text = response.message.content.strip()
+    else:
+        raw_text = str(response)
+
+    # Nettoyage d'éventuels blocs markdown ```json ... ```
+    cleaned_text = raw_text.strip()
+    if cleaned_text.startswith("```json"):
+        cleaned_text = cleaned_text[7:]
+    if cleaned_text.startswith("```"):
+        cleaned_text = cleaned_text[3:]
+    if cleaned_text.endswith("```"):
+        cleaned_text = cleaned_text[:-3]
+
+    return json.loads(cleaned_text.strip())
