@@ -8,10 +8,12 @@ import {
   RotateCcw, 
   Loader2, 
   Award,
-  BookOpen
+  BookOpen,
+  Sparkles,
+  Send
 } from 'lucide-react';
 
-const CATEGORIES = [
+const PRESET_CATEGORIES = [
   { id: 'react', name: 'React & Frontend', color: 'from-cyan-500 to-blue-500' },
   { id: 'nodejs', name: 'Node.js & Express', color: 'from-emerald-500 to-green-600' },
   { id: 'python', name: 'Python & Django', color: 'from-amber-500 to-yellow-600' },
@@ -20,6 +22,7 @@ const CATEGORIES = [
 
 export default function QuizPractice({ onBack }) {
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const [customCategoryInput, setCustomCategoryInput] = useState('');
   const [questions, setQuestions] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedOption, setSelectedOption] = useState(null);
@@ -31,7 +34,7 @@ export default function QuizPractice({ onBack }) {
   const API_BASE_URL = 'http://localhost:8000/api';
   const getToken = () => localStorage.getItem('authToken') || localStorage.getItem('access_token');
 
-  // Sauvegarde automatique du résultat dans la base de données à la fin du quiz
+  // Enregistrement automatique du score à la fin du quiz
   useEffect(() => {
     if (isQuizFinished && selectedCategory && questions.length > 0) {
       const saveResult = async () => {
@@ -49,7 +52,7 @@ export default function QuizPractice({ onBack }) {
             }
           );
         } catch (err) {
-          console.error("Erreur lors de l'enregistrement du score d'entraînement :", err);
+          console.error("Erreur lors de l'enregistrement de l'entraînement :", err);
         }
       };
 
@@ -57,9 +60,9 @@ export default function QuizPractice({ onBack }) {
     }
   }, [isQuizFinished]);
 
-  // Lancement du quiz avec 20 questions
-  const startQuiz = async (category) => {
-    setSelectedCategory(category);
+  // Lancement du quiz pour une catégorie prédéfinie ou personnalisée
+  const startQuiz = async (categoryObj) => {
+    setSelectedCategory(categoryObj);
     setLoading(true);
     setCurrentIndex(0);
     setScore(0);
@@ -69,38 +72,38 @@ export default function QuizPractice({ onBack }) {
 
     try {
       const token = getToken();
-      // Demande 20 questions via le paramètre count=20
-      const res = await axios.get(`${API_BASE_URL}/quiz/?category=${encodeURIComponent(category.name)}&count=20`, {
-        headers: { Authorization: `Token ${token}` }
-      });
+      const res = await axios.get(
+        `${API_BASE_URL}/quiz/?category=${encodeURIComponent(categoryObj.name)}&count=20`,
+        { headers: { Authorization: `Token ${token}` } }
+      );
       setQuestions(res.data);
     } catch (err) {
-      console.warn("Impossible de joindre l'API quiz, chargement des questions par défaut.", err);
-      // Fallback local d'exemple
+      console.warn("Impossible de joindre l'API quiz, chargement de secours.", err);
       setQuestions([
         {
           id: 1,
-          question: "En React, quel Hook est utilisé pour exécuter des effets secondaires dans un composant fonctionnel ?",
-          options: ["useState", "useEffect", "useContext", "useReducer"],
-          correctIndex: 1,
-          explanation: "useEffect permet de gérer les effets secondaires comme les appels API, les abonnements ou la modification manuelle du DOM."
-        },
-        {
-          id: 2,
-          question: "Quelle est la principale différence entre 'let' et 'var' en JavaScript ?",
-          options: [
-            "var a une portée de bloc, let a une portée de fonction",
-            "let a une portée de bloc, var a une portée de fonction",
-            "Il n'y a aucune différence",
-            "let ne peut pas être réassigné"
-          ],
-          correctIndex: 1,
-          explanation: "let (et const) respectent le block scope ({...}), contrairement à var qui est limité à la fonction parente ou au scope global."
+          question: `Question de démonstration sur ${categoryObj.name} ?`,
+          options: ["Option A", "Option B", "Option C", "Option D"],
+          correctIndex: 0,
+          explanation: "Veuillez vérifier votre connexion à l'API et votre clé Ollama."
         }
       ]);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCustomSubmit = (e) => {
+    e.preventDefault();
+    if (!customCategoryInput.trim()) return;
+
+    const customCategory = {
+      id: 'custom',
+      name: customCategoryInput.trim(),
+      color: 'from-pink-500 to-rose-600'
+    };
+
+    startQuiz(customCategory);
   };
 
   const handleSelectOption = (index) => {
@@ -110,7 +113,6 @@ export default function QuizPractice({ onBack }) {
 
   const handleValidate = () => {
     if (selectedOption === null) return;
-    
     if (selectedOption === questions[currentIndex].correctIndex) {
       setScore((prev) => prev + 1);
     }
@@ -128,39 +130,75 @@ export default function QuizPractice({ onBack }) {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       
-      {/* Sélection de la catégorie */}
+      {/* Écran d'accueil & choix de la technologie */}
       {!selectedCategory && (
-        <div className="space-y-4">
-          <h2 className="text-xl font-bold text-white">Choisissez un domaine à réviser</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {CATEGORIES.map((cat) => (
+        <div className="space-y-6">
+          
+          {/* Section 1 : Saisie d'une technologie sur-mesure */}
+          <div className="bg-gradient-to-r from-slate-900 via-slate-900/90 to-cyan-950/40 border border-slate-800 p-6 rounded-2xl space-y-4 shadow-xl">
+            <div className="flex items-center gap-2 text-cyan-400">
+              <Sparkles className="w-5 h-5 animate-pulse" />
+              <h2 className="text-base font-bold text-white">Générer un quiz IA sur-mesure</h2>
+            </div>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Entrez n'importe quelle technologie, framework ou concept informatique (ex: Docker, GraphQL, Kubernetes, Rust, Spring Boot...) pour générer un QCM personnalisé.
+            </p>
+            
+            <form onSubmit={handleCustomSubmit} className="flex gap-3 pt-1">
+              <input
+                type="text"
+                value={customCategoryInput}
+                onChange={(e) => setCustomCategoryInput(e.target.value)}
+                placeholder="Ex: Docker & Containers, Redis, C++..."
+                className="flex-1 bg-slate-950 border border-slate-700/80 focus:border-cyan-500 focus:outline-none rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 transition-colors"
+              />
               <button
-                key={cat.id}
-                onClick={() => startQuiz(cat)}
-                className="group relative overflow-hidden bg-slate-900/60 hover:bg-slate-900 border border-slate-800 hover:border-cyan-500/50 p-6 rounded-2xl text-left transition-all flex items-center justify-between"
+                type="submit"
+                disabled={!customCategoryInput.trim()}
+                className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:opacity-90 disabled:opacity-40 text-slate-950 font-bold text-xs rounded-xl transition-all shrink-0"
               >
-                <div className="space-y-1 z-10">
-                  <h3 className="font-bold text-white text-base group-hover:text-cyan-300 transition-colors">
-                    {cat.name}
-                  </h3>
-                  <p className="text-xs text-slate-400">20 questions aléatoires à choix multiples</p>
-                </div>
-                <div className={`w-10 h-10 rounded-xl bg-gradient-to-tr ${cat.color} flex items-center justify-center text-slate-950 font-bold shrink-0 shadow-lg`}>
-                  <BookOpen className="w-5 h-5 text-slate-950" />
-                </div>
+                <span>Générer</span>
+                <Send className="w-4 h-4" />
               </button>
-            ))}
+            </form>
           </div>
+
+          {/* Section 2 : Domaines suggérés */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">Ou choisissez un domaine prédéfini</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {PRESET_CATEGORIES.map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={() => startQuiz(cat)}
+                  className="group relative overflow-hidden bg-slate-900/60 hover:bg-slate-900 border border-slate-800 hover:border-cyan-500/50 p-6 rounded-2xl text-left transition-all flex items-center justify-between"
+                >
+                  <div className="space-y-1 z-10">
+                    <h3 className="font-bold text-white text-base group-hover:text-cyan-300 transition-colors">
+                      {cat.name}
+                    </h3>
+                    <p className="text-xs text-slate-400">20 questions aléatoires générées par l'IA</p>
+                  </div>
+                  <div className={`w-10 h-10 rounded-xl bg-gradient-to-tr ${cat.color} flex items-center justify-center text-slate-950 font-bold shrink-0 shadow-lg`}>
+                    <BookOpen className="w-5 h-5 text-slate-950" />
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
         </div>
       )}
 
       {/* État de chargement */}
       {loading && (
-        <div className="flex flex-col items-center justify-center py-20 text-slate-400">
-          <Loader2 className="w-8 h-8 animate-spin text-cyan-400 mb-3" />
-          <p className="text-sm">Génération de 20 questions techniques avec l'IA...</p>
+        <div className="flex flex-col items-center justify-center py-20 text-slate-400 space-y-3">
+          <Loader2 className="w-10 h-10 animate-spin text-cyan-400" />
+          <p className="text-sm font-medium text-slate-300">
+            L'IA prépare 20 questions sur <span className="text-cyan-400 font-bold">{selectedCategory?.name}</span>...
+          </p>
         </div>
       )}
 
@@ -168,7 +206,6 @@ export default function QuizPractice({ onBack }) {
       {selectedCategory && !loading && !isQuizFinished && questions.length > 0 && (
         <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 space-y-6">
           
-          {/* Progression */}
           <div className="flex items-center justify-between border-b border-slate-800/80 pb-4">
             <div>
               <span className="text-xs font-mono text-cyan-400 uppercase tracking-wider">{selectedCategory.name}</span>
@@ -179,12 +216,10 @@ export default function QuizPractice({ onBack }) {
             </span>
           </div>
 
-          {/* Intitulé de la question */}
           <div className="text-base font-semibold text-white leading-relaxed">
             {questions[currentIndex].question}
           </div>
 
-          {/* Options de réponse */}
           <div className="space-y-3">
             {questions[currentIndex].options.map((opt, idx) => {
               let btnStyle = "bg-slate-950/60 border-slate-800 hover:border-slate-700 text-slate-300";
@@ -220,7 +255,6 @@ export default function QuizPractice({ onBack }) {
             })}
           </div>
 
-          {/* Explication technique */}
           {showExplanation && (
             <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2 text-xs text-slate-300">
               <div className="flex items-center gap-2 font-semibold text-cyan-400">
@@ -231,7 +265,6 @@ export default function QuizPractice({ onBack }) {
             </div>
           )}
 
-          {/* Action : Valider ou Question suivante */}
           <div className="flex justify-end pt-2">
             {!showExplanation ? (
               <button
@@ -264,7 +297,7 @@ export default function QuizPractice({ onBack }) {
           <div className="space-y-2">
             <h3 className="text-xl font-bold text-white">Quiz Terminé !</h3>
             <p className="text-sm text-slate-400">
-              Vous avez obtenu <span className="text-cyan-400 font-bold">{score}</span> / <span className="text-white font-bold">{questions.length}</span> bonnes réponses.
+              Résultat sur <span className="text-cyan-400 font-bold">{selectedCategory?.name}</span> : <span className="text-cyan-400 font-bold">{score}</span> / <span className="text-white font-bold">{questions.length}</span> bonnes réponses.
             </p>
           </div>
 
@@ -277,7 +310,10 @@ export default function QuizPractice({ onBack }) {
               <span>Recommencer</span>
             </button>
             <button
-              onClick={() => setSelectedCategory(null)}
+              onClick={() => {
+                setSelectedCategory(null);
+                setCustomCategoryInput('');
+              }}
               className="px-4 py-2.5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold rounded-xl transition-all"
             >
               Changer de domaine
