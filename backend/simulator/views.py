@@ -12,7 +12,7 @@ from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
 from allauth.socialaccount.providers.oauth2.client import OAuth2Client
 from dj_rest_auth.registration.views import SocialLoginView
 
-from .models import CandidateProfile, InterviewSession, Message, EvaluationReport,PracticeResult
+from .models import CandidateProfile, InterviewSession, Message, EvaluationReport, PracticeResult
 from .serializers import (
     UserSerializer,
     CandidateProfileSerializer,
@@ -21,7 +21,7 @@ from .serializers import (
     EvaluationReportSerializer,
     PracticeResultSerializer
 )
-from .services import get_ai_response, generate_quiz_with_ai
+from .services import get_ai_response, generate_quiz_with_ai, evaluate_system_design_with_ai
 
 
 # ==========================================
@@ -75,6 +75,7 @@ def update_ollama_key(request):
 # ==========================================
 # GENERATION DE QUIZ TECHNIQUE (OLLAMA)
 # ==========================================
+
 class PracticeResultViewSet(viewsets.ModelViewSet):
     serializer_class = PracticeResultSerializer
     permission_classes = [IsAuthenticated]
@@ -84,6 +85,7 @@ class PracticeResultViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
+
 
 class QuizGenerateView(APIView):
     permission_classes = [IsAuthenticated]
@@ -99,6 +101,45 @@ class QuizGenerateView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({"error": f"Erreur de génération : {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ==========================================
+# EVALUATION SYSTEM DESIGN (OLLAMA)
+# ==========================================
+
+class EvaluateSystemDesignView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        data = request.data
+
+        scenario_title = data.get('scenario_title', '')
+        database_choice = data.get('database_choice', '')
+        cache_strategy = data.get('cache_strategy', '')
+        messaging_strategy = data.get('messaging_strategy', '')
+        architecture_details = data.get('architecture_details', '')
+
+        if not architecture_details:
+            return Response(
+                {"error": "Les détails de l'architecture sont requis."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            evaluation = evaluate_system_design_with_ai(
+                user=request.user,
+                scenario_title=scenario_title,
+                database_choice=database_choice,
+                cache_strategy=cache_strategy,
+                messaging_strategy=messaging_strategy,
+                architecture_details=architecture_details
+            )
+            return Response(evaluation, status=status.HTTP_200_OK)
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error": f"Erreur d'évaluation : {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 # ==========================================
 # VIEWSETS SIMULATEUR & CV (SÉCURISÉS)

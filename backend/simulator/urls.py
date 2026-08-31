@@ -8,12 +8,13 @@ from .views import (
     GoogleLoginView,
     update_ollama_key,
     QuizGenerateView,
-    PracticeResultViewSet
+    PracticeResultViewSet,
+    EvaluateSystemDesignView
 )
 
 router = DefaultRouter()
 router.register(r'profiles', CandidateProfileViewSet, basename='profile')
-router.register(r'sessions', InterviewSessionViewSet, basename='session') # Ligne corrigée
+router.register(r'sessions', InterviewSessionViewSet, basename='session')
 router.register(r'messages', MessageViewSet, basename='message')
 router.register(r'reports', EvaluationReportViewSet, basename='report')
 router.register(r'practice-results', PracticeResultViewSet, basename='practice-result')
@@ -30,4 +31,7 @@ urlpatterns = [
 
     # Endpoint pour générer les questions QCM via Ollama
     path('quiz/', QuizGenerateView.as_view(), name='quiz_generate'),
+
+    # Endpoint pour l'évaluation de System Design via Ollama
+    path('system-design/evaluate/', EvaluateSystemDesignView.as_view(), name='system_design_evaluate'),
 ]

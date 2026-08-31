@@ -27,26 +27,22 @@ Fiche de poste : {session.job_description}
 
 def get_ai_response(session, user_message=None):
     """Génère la réponse de l'IA pour la simulation d'entretien"""
-    # 1. Récupération de la clé API propre à l'utilisateur
     profile = getattr(session.user, 'profile', None)
     user_api_key = profile.api_key if profile else None
 
     if not user_api_key:
         return "Erreur : Aucune clé API Ollama n'est configurée pour votre compte. Veuillez renseigner votre clé dans l'en-tête de l'application."
 
-    # 2. Instanciation du client Ollama Cloud
     client = Client(
         host='https://ollama.com',
         headers={'Authorization': f"Bearer {user_api_key}"}
     )
 
-    # 3. Construction du prompt système enrichi avec le CV
     system_prompt = build_system_prompt(session)
     messages = [
         {'role': 'system', 'content': system_prompt}
     ]
 
-    # 4. Historique de la conversation
     for msg in session.messages.order_by('timestamp'):
         role = 'user' if msg.sender == 'CANDIDATE' else 'assistant'
         messages.append({'role': role, 'content': msg.content})
@@ -63,6 +59,7 @@ def get_ai_response(session, user_message=None):
     except Exception as e:
         return f"Erreur lors de la communication avec Ollama : {str(e)}"
 
+
 def generate_quiz_with_ai(user, category='react', count=20):
     """Génère un QCM technique dynamique de questions à choix multiples via Ollama"""
     profile = getattr(user, 'profile', None)
@@ -76,7 +73,6 @@ def generate_quiz_with_ai(user, category='react', count=20):
         headers={'Authorization': f"Bearer {user_api_key}"}
     )
 
-    # Ajout d'une graine d'aléatoire pour forcer la diversité
     random_seed = random.randint(1000, 9999)
 
     prompt = f"""
@@ -97,6 +93,70 @@ Réponds EXCLUSIVEMENT sous la forme d'un tableau JSON valide (JSON pur), sans m
 
     messages = [
         {'role': 'system', 'content': 'Tu es un générateur de QCM techniques. Réponds uniquement en JSON pur sans texte additionnel.'},
+        {'role': 'user', 'content': prompt}
+    ]
+
+    response = client.chat(model='gpt-oss:120b-cloud', messages=messages)
+
+    if isinstance(response, dict):
+        raw_text = response['message']['content'].strip()
+    elif hasattr(response, 'message'):
+        raw_text = response.message.content.strip()
+    else:
+        raw_text = str(response)
+
+    cleaned_text = raw_text.strip()
+    if cleaned_text.startswith("```json"):
+        cleaned_text = cleaned_text[7:]
+    if cleaned_text.startswith("```"):
+        cleaned_text = cleaned_text[3:]
+    if cleaned_text.endswith("```"):
+        cleaned_text = cleaned_text[:-3]
+
+    return json.loads(cleaned_text.strip())
+
+
+def evaluate_system_design_with_ai(user, scenario_title, database_choice, cache_strategy, messaging_strategy, architecture_details):
+    """Évalue une proposition d'architecture système (System Design) via Ollama en utilisant la clé API de l'utilisateur."""
+    profile = getattr(user, 'profile', None)
+    user_api_key = profile.api_key if profile else None
+
+    if not user_api_key:
+        raise ValueError("Aucune clé API Ollama n'est configurée pour votre compte.")
+
+    client = Client(
+        host='https://ollama.com',
+        headers={'Authorization': f"Bearer {user_api_key}"}
+    )
+
+    prompt = f"""
+En tant qu'Architecte Système Senior / Lead Tech, évalue la proposition d'architecture suivante.
+
+--- ÉTUDE DE CAS ---
+Sujet : {scenario_title}
+Choix Base de données : {database_choice}
+Stratégie de Cache : {cache_strategy}
+Communication / Message Broker : {messaging_strategy}
+Détails de l'architecture proposée : {architecture_details}
+
+Réponds EXCLUSIVEMENT sous la forme d'un objet JSON valide (JSON pur), sans blocs markdown ni texte superflu :
+{{
+  "score": 85,
+  "strengths": [
+    "Point fort 1",
+    "Point fort 2"
+  ],
+  "weaknesses": [
+    "Point faible ou SPOF 1",
+    "Point faible ou SPOF 2"
+  ],
+  "scalability_notes": "Analyse de la montée en charge et résilience.",
+  "recommendations": "Recommandations précises pour améliorer l'architecture."
+}}
+"""
+
+    messages = [
+        {'role': 'system', 'content': 'Tu es un expert en System Design et architecture distribuée. Réponds uniquement en JSON pur sans texte additionnel.'},
         {'role': 'user', 'content': prompt}
     ]
 
