@@ -178,3 +178,111 @@ Réponds EXCLUSIVEMENT sous la forme d'un objet JSON valide (JSON pur), sans blo
         cleaned_text = cleaned_text[:-3]
 
     return json.loads(cleaned_text.strip())
+# Ajout feature for IDE about Evaluate knowledge USER
+
+def evaluate_code_review_with_ai(user, code_snippet, candidate_analysis):
+    """Évalue un extrait de code soumis et l'analyse du candidat via Ollama."""
+    profile = getattr(user, 'profile', None)
+    user_api_key = profile.api_key if profile else None
+
+    if not user_api_key:
+        raise ValueError("Aucune clé API Ollama n'est configurée pour votre compte.")
+
+    client = Client(
+        host='https://ollama.com',
+        headers={'Authorization': f"Bearer {user_api_key}"}
+    )
+
+    prompt = f"""
+    En tant qu'Architecte Logiciel Senior, évalue l'analyse et la correction du code suivant par le candidat.
+
+    --- EXTRAIT DE CODE SOUMIS ---
+    {code_snippet}
+
+    --- ANALYSE / CORRECTION DU CANDIDAT ---
+    {candidate_analysis}
+
+    Réponds EXCLUSIVEMENT sous la forme d'un objet JSON valide (JSON pur), sans blocs markdown ni texte superflu :
+    {{
+    "score": 90,
+    "identified_bugs": ["Bug 1", "Bug 2"],
+    "code_quality_feedback": "Commentaire sur la propreté du code.",
+    "security_notes": "Remarques sur les failles potentielles.",
+    "improved_code": "Code corrigé si nécessaire"
+    }}
+    """
+
+    messages = [
+        {'role': 'system', 'content': 'Tu es un expert en code review et en sécurité logicielle. Réponds uniquement en JSON pur sans texte additionnel.'},
+        {'role': 'user', 'content': prompt}
+    ]
+
+    response = client.chat(model='gpt-oss:120b-cloud', messages=messages)
+
+    if isinstance(response, dict):
+        raw_text = response['message']['content'].strip()
+    elif hasattr(response, 'message'):
+        raw_text = response.message.content.strip()
+    else:
+        raw_text = str(response)
+
+    cleaned_text = raw_text.strip()
+    if cleaned_text.startswith("```json"):
+        cleaned_text = cleaned_text[7:]
+    if cleaned_text.startswith("```"):
+        cleaned_text = cleaned_text[3:]
+    if cleaned_text.endswith("```"):
+        cleaned_text = cleaned_text[:-3]
+
+    return json.loads(cleaned_text.strip())
+
+def generate_code_review_with_ai(user, language='python'):
+    """Génère un extrait de code à analyser contenant un bug ou une faille de sécurité via Ollama."""
+    profile = getattr(user, 'profile', None)
+    user_api_key = profile.api_key if profile else None
+
+    if not user_api_key:
+        raise ValueError("Aucune clé API Ollama n'est configurée pour votre compte.")
+
+    client = Client(
+        host='https://ollama.com',
+        headers={'Authorization': f"Bearer {user_api_key}"}
+    )
+
+    random_seed = random.randint(1000, 9999)
+
+    prompt = f"""
+Génère un extrait de code réaliste en langage '{language}' (entre 8 et 15 lignes) contenant un bug, une faille de sécurité (ex: SQLi, Memory Leak, XSS, mauvaise gestion d'état) ou un problème de performance.
+Graine de variabilité : {random_seed}.
+
+Réponds EXCLUSIVEMENT sous la forme d'un objet JSON valide (JSON pur), sans blocs markdown ni texte superflu :
+{{
+  "title": "Intitulé concis du problème",
+  "language": "{language}",
+  "code": "code source ici"
+}}
+"""
+
+    messages = [
+        {'role': 'system', 'content': 'Tu es un générateur d\'exercices de revue de code. Réponds uniquement en JSON pur.'},
+        {'role': 'user', 'content': prompt}
+    ]
+
+    response = client.chat(model='gpt-oss:120b-cloud', messages=messages)
+
+    if isinstance(response, dict):
+        raw_text = response['message']['content'].strip()
+    elif hasattr(response, 'message'):
+        raw_text = response.message.content.strip()
+    else:
+        raw_text = str(response)
+
+    cleaned_text = raw_text.strip()
+    if cleaned_text.startswith("```json"):
+        cleaned_text = cleaned_text[7:]
+    if cleaned_text.startswith("```"):
+        cleaned_text = cleaned_text[3:]
+    if cleaned_text.endswith("```"):
+        cleaned_text = cleaned_text[:-3]
+
+    return json.loads(cleaned_text.strip())

@@ -9,7 +9,9 @@ from .views import (
     update_ollama_key,
     QuizGenerateView,
     PracticeResultViewSet,
-    EvaluateSystemDesignView
+    EvaluateSystemDesignView,
+    EvaluateCodeReviewView,
+    GenerateCodeReviewView,  # <--- Ajouté ici
 )
 
 router = DefaultRouter()
@@ -34,4 +36,8 @@ urlpatterns = [
 
     # Endpoint pour l'évaluation de System Design via Ollama
     path('system-design/evaluate/', EvaluateSystemDesignView.as_view(), name='system_design_evaluate'),
+
+    # Endpoints pour Code Review (Génération + Évaluation)
+    path('generate-code-review/', GenerateCodeReviewView.as_view(), name='generate-code-review'),
+    path('evaluate-code-review/', EvaluateCodeReviewView.as_view(), name='evaluate-code-review'),
 ]

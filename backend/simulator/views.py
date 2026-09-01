@@ -19,9 +19,20 @@ from .serializers import (
     InterviewSessionSerializer,
     MessageSerializer,
     EvaluationReportSerializer,
-    PracticeResultSerializer
+    PracticeResultSerializer, 
 )
-from .services import get_ai_response, generate_quiz_with_ai, evaluate_system_design_with_ai
+from .services import (
+    get_ai_response, 
+    generate_quiz_with_ai, 
+    evaluate_system_design_with_ai,
+    evaluate_code_review_with_ai,
+)
+
+# Import optionnel si la fonction est déjà définie dans services.py
+try:
+    from .services import generate_code_review_with_ai
+except ImportError:
+    generate_code_review_with_ai = None
 
 
 # ==========================================
@@ -139,6 +150,62 @@ class EvaluateSystemDesignView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({"error": f"Erreur d'évaluation : {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ==========================================
+# REVUE DE CODE & DEBOGAGE (OLLAMA)
+# ==========================================
+
+class GenerateCodeReviewView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        language = request.data.get('language', 'python')
+
+        try:
+            if generate_code_review_with_ai:
+                code_data = generate_code_review_with_ai(request.user, language=language)
+                return Response(code_data, status=status.HTTP_200_OK)
+
+            # Fallback par défaut si la fonction d'IA dédiée n'est pas dans services.py
+            sample_codes = {
+                'python': {
+                    'title': 'Injection SQL (Python)',
+                    'language': 'python',
+                    'code': "def get_user_data(request):\n    username = request.GET.get('username')\n    # Requête directe non sécurisée\n    query = f\"SELECT * FROM users WHERE username = '{username}'\"\n    cursor.execute(query)\n    return cursor.fetchall()"
+                },
+                'javascript': {
+                    'title': 'Memory Leak (React)',
+                    'language': 'javascript',
+                    'code': "import { useState, useEffect } from 'react';\n\nfunction LiveFeed() {\n  const [data, setData] = useState(null);\n\n  useEffect(() => {\n    const interval = setInterval(() => {\n      fetchData().then(res => setData(res));\n    }, 1000);\n    // Manque le cleanup dans le return du useEffect\n  }, []);\n\n  return <div>{data ? data.title : 'Loading...'}</div>;\n}"
+                },
+                'sql': {
+                    'title': 'Produit cartésien non filtré (SQL)',
+                    'language': 'sql',
+                    'code': "SELECT u.name, o.id\nFROM users u, orders o\nWHERE o.status = 'PENDING';"
+                }
+            }
+            data = sample_codes.get(language, sample_codes['python'])
+            return Response(data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": f"Erreur de génération : {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class EvaluateCodeReviewView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        code_snippet = request.data.get('code_snippet', '')
+        candidate_analysis = request.data.get('candidate_analysis', '')
+
+        if not code_snippet:
+            return Response({"error": "L'extrait de code est requis."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            evaluation = evaluate_code_review_with_ai(request.user, code_snippet, candidate_analysis)
+            return Response(evaluation, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # ==========================================

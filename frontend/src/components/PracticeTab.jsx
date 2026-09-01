@@ -9,9 +9,10 @@ import {
 } from 'lucide-react';
 import QuickQuiz from './QuizPractice';
 import SystemDesignPractice from './SystemDesignPractice';
+import CodeReviewPractice from './CodeReviewPractice';
 
 export default function PracticeTab() {
-  const [activeModule, setActiveModule] = useState(null); // null | 'technical' | 'system-design' | 'code-review' | 'algo'
+  const [activeModule, setActiveModule] = useState(null);
 
   const modules = [
     {
@@ -43,7 +44,7 @@ export default function PracticeTab() {
       icon: Code2,
       color: 'from-emerald-500 to-teal-600',
       badgeColor: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-      status: 'À venir',
+      status: 'Disponible',
       tags: ['Refactoring', 'Security', 'Clean Code', 'Performance'],
       level: 'Intermédiaire'
     },
@@ -60,14 +61,16 @@ export default function PracticeTab() {
     }
   ];
 
-  // Affichage du module QCM
   if (activeModule === 'technical') {
     return <QuickQuiz onBack={() => setActiveModule(null)} />;
   }
 
-  // Affichage du module System Design (Remplace l'écran temporaire)
   if (activeModule === 'system-design') {
     return <SystemDesignPractice onBack={() => setActiveModule(null)} />;
+  }
+
+  if (activeModule === 'code-review') {
+    return <CodeReviewPractice onBack={() => setActiveModule(null)} />;
   }
 
   return (
@@ -89,7 +92,7 @@ export default function PracticeTab() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {modules.map((mod) => {
           const Icon = mod.icon;
-          const isInteractive = mod.id === 'technical' || mod.id === 'system-design';
+          const isInteractive = mod.id === 'technical' || mod.id === 'system-design' || mod.id === 'code-review';
 
           return (
             <div
