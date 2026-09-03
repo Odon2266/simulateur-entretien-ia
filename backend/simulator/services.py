@@ -1,9 +1,48 @@
 import json
-from ollama import Client
 import random
+from ollama import Client
+
+
+def _get_ollama_client(user):
+    """Fonction utilitaire pour récupérer la clé API et instancier le client Ollama Cloud."""
+    profile = getattr(user, 'profile', None)
+    user_api_key = profile.api_key if profile else None
+
+    if not user_api_key:
+        raise ValueError("Aucune clé API Ollama n'est configurée pour votre compte.")
+
+    return Client(
+        host='https://ollama.com',
+        headers={'Authorization': f"Bearer {user_api_key}"}
+    )
+
+
+def _clean_json_response(raw_response):
+    """Fonction utilitaire pour nettoyer et parser les réponses JSON renvoyées par l'IA."""
+    if isinstance(raw_response, dict):
+        raw_text = raw_response['message']['content'].strip()
+    elif hasattr(raw_response, 'message'):
+        raw_text = raw_response.message.content.strip()
+    else:
+        raw_text = str(raw_response)
+
+    cleaned_text = raw_text.strip()
+    if cleaned_text.startswith("```json"):
+        cleaned_text = cleaned_text[7:]
+    if cleaned_text.startswith("```"):
+        cleaned_text = cleaned_text[3:]
+    if cleaned_text.endswith("```"):
+        cleaned_text = cleaned_text[:-3]
+
+    return json.loads(cleaned_text.strip())
+
+
+# ==========================================
+# SIMULATION D'ENTRETIEN (SIMULATION CHAT)
+# ==========================================
 
 def build_system_prompt(session):
-    """Construit le prompt système pour l'IA en intégrant le CV et l'offre d'emploi"""
+    """Construit le prompt système pour l'IA en intégrant le CV et l'offre d'emploi."""
     profile = getattr(session.user, 'profile', None)
     cv_text = profile.cv_text if profile and profile.cv_text else "Aucun CV fourni."
 
@@ -26,17 +65,11 @@ Fiche de poste : {session.job_description}
 
 
 def get_ai_response(session, user_message=None):
-    """Génère la réponse de l'IA pour la simulation d'entretien"""
-    profile = getattr(session.user, 'profile', None)
-    user_api_key = profile.api_key if profile else None
-
-    if not user_api_key:
-        return "Erreur : Aucune clé API Ollama n'est configurée pour votre compte. Veuillez renseigner votre clé dans l'en-tête de l'application."
-
-    client = Client(
-        host='https://ollama.com',
-        headers={'Authorization': f"Bearer {user_api_key}"}
-    )
+    """Génère la réponse de l'IA pour la simulation d'entretien."""
+    try:
+        client = _get_ollama_client(session.user)
+    except ValueError as e:
+        return f"Erreur : {str(e)}"
 
     system_prompt = build_system_prompt(session)
     messages = [
@@ -60,19 +93,13 @@ def get_ai_response(session, user_message=None):
         return f"Erreur lors de la communication avec Ollama : {str(e)}"
 
 
+# ==========================================
+# MODULE QCM & QUIZ IA
+# ==========================================
+
 def generate_quiz_with_ai(user, category='react', count=20):
-    """Génère un QCM technique dynamique de questions à choix multiples via Ollama"""
-    profile = getattr(user, 'profile', None)
-    user_api_key = profile.api_key if profile else None
-
-    if not user_api_key:
-        raise ValueError("Aucune clé API Ollama n'est configurée pour votre compte.")
-
-    client = Client(
-        host='https://ollama.com',
-        headers={'Authorization': f"Bearer {user_api_key}"}
-    )
-
+    """Génère un QCM technique dynamique de questions à choix multiples via Ollama."""
+    client = _get_ollama_client(user)
     random_seed = random.randint(1000, 9999)
 
     prompt = f"""
@@ -97,37 +124,16 @@ Réponds EXCLUSIVEMENT sous la forme d'un tableau JSON valide (JSON pur), sans m
     ]
 
     response = client.chat(model='gpt-oss:120b-cloud', messages=messages)
+    return _clean_json_response(response)
 
-    if isinstance(response, dict):
-        raw_text = response['message']['content'].strip()
-    elif hasattr(response, 'message'):
-        raw_text = response.message.content.strip()
-    else:
-        raw_text = str(response)
 
-    cleaned_text = raw_text.strip()
-    if cleaned_text.startswith("```json"):
-        cleaned_text = cleaned_text[7:]
-    if cleaned_text.startswith("```"):
-        cleaned_text = cleaned_text[3:]
-    if cleaned_text.endswith("```"):
-        cleaned_text = cleaned_text[:-3]
-
-    return json.loads(cleaned_text.strip())
-
+# ==========================================
+# MODULE SYSTEM DESIGN
+# ==========================================
 
 def evaluate_system_design_with_ai(user, scenario_title, database_choice, cache_strategy, messaging_strategy, architecture_details):
-    """Évalue une proposition d'architecture système (System Design) via Ollama en utilisant la clé API de l'utilisateur."""
-    profile = getattr(user, 'profile', None)
-    user_api_key = profile.api_key if profile else None
-
-    if not user_api_key:
-        raise ValueError("Aucune clé API Ollama n'est configurée pour votre compte.")
-
-    client = Client(
-        host='https://ollama.com',
-        headers={'Authorization': f"Bearer {user_api_key}"}
-    )
+    """Évalue une proposition d'architecture système (System Design) via Ollama."""
+    client = _get_ollama_client(user)
 
     prompt = f"""
 En tant qu'Architecte Système Senior / Lead Tech, évalue la proposition d'architecture suivante.
@@ -161,94 +167,16 @@ Réponds EXCLUSIVEMENT sous la forme d'un objet JSON valide (JSON pur), sans blo
     ]
 
     response = client.chat(model='gpt-oss:120b-cloud', messages=messages)
+    return _clean_json_response(response)
 
-    if isinstance(response, dict):
-        raw_text = response['message']['content'].strip()
-    elif hasattr(response, 'message'):
-        raw_text = response.message.content.strip()
-    else:
-        raw_text = str(response)
 
-    cleaned_text = raw_text.strip()
-    if cleaned_text.startswith("```json"):
-        cleaned_text = cleaned_text[7:]
-    if cleaned_text.startswith("```"):
-        cleaned_text = cleaned_text[3:]
-    if cleaned_text.endswith("```"):
-        cleaned_text = cleaned_text[:-3]
-
-    return json.loads(cleaned_text.strip())
-# Ajout feature for IDE about Evaluate knowledge USER
-
-def evaluate_code_review_with_ai(user, code_snippet, candidate_analysis):
-    """Évalue un extrait de code soumis et l'analyse du candidat via Ollama."""
-    profile = getattr(user, 'profile', None)
-    user_api_key = profile.api_key if profile else None
-
-    if not user_api_key:
-        raise ValueError("Aucune clé API Ollama n'est configurée pour votre compte.")
-
-    client = Client(
-        host='https://ollama.com',
-        headers={'Authorization': f"Bearer {user_api_key}"}
-    )
-
-    prompt = f"""
-    En tant qu'Architecte Logiciel Senior, évalue l'analyse et la correction du code suivant par le candidat.
-
-    --- EXTRAIT DE CODE SOUMIS ---
-    {code_snippet}
-
-    --- ANALYSE / CORRECTION DU CANDIDAT ---
-    {candidate_analysis}
-
-    Réponds EXCLUSIVEMENT sous la forme d'un objet JSON valide (JSON pur), sans blocs markdown ni texte superflu :
-    {{
-    "score": 90,
-    "identified_bugs": ["Bug 1", "Bug 2"],
-    "code_quality_feedback": "Commentaire sur la propreté du code.",
-    "security_notes": "Remarques sur les failles potentielles.",
-    "improved_code": "Code corrigé si nécessaire"
-    }}
-    """
-
-    messages = [
-        {'role': 'system', 'content': 'Tu es un expert en code review et en sécurité logicielle. Réponds uniquement en JSON pur sans texte additionnel.'},
-        {'role': 'user', 'content': prompt}
-    ]
-
-    response = client.chat(model='gpt-oss:120b-cloud', messages=messages)
-
-    if isinstance(response, dict):
-        raw_text = response['message']['content'].strip()
-    elif hasattr(response, 'message'):
-        raw_text = response.message.content.strip()
-    else:
-        raw_text = str(response)
-
-    cleaned_text = raw_text.strip()
-    if cleaned_text.startswith("```json"):
-        cleaned_text = cleaned_text[7:]
-    if cleaned_text.startswith("```"):
-        cleaned_text = cleaned_text[3:]
-    if cleaned_text.endswith("```"):
-        cleaned_text = cleaned_text[:-3]
-
-    return json.loads(cleaned_text.strip())
+# ==========================================
+# MODULE REVUE DE CODE & DÉBOGAGE
+# ==========================================
 
 def generate_code_review_with_ai(user, language='python'):
-    """Génère un extrait de code à analyser contenant un bug ou une faille de sécurité via Ollama."""
-    profile = getattr(user, 'profile', None)
-    user_api_key = profile.api_key if profile else None
-
-    if not user_api_key:
-        raise ValueError("Aucune clé API Ollama n'est configurée pour votre compte.")
-
-    client = Client(
-        host='https://ollama.com',
-        headers={'Authorization': f"Bearer {user_api_key}"}
-    )
-
+    """Génère un extrait de code contenant un bug ou une faille de sécurité."""
+    client = _get_ollama_client(user)
     random_seed = random.randint(1000, 9999)
 
     prompt = f"""
@@ -269,20 +197,107 @@ Réponds EXCLUSIVEMENT sous la forme d'un objet JSON valide (JSON pur), sans blo
     ]
 
     response = client.chat(model='gpt-oss:120b-cloud', messages=messages)
+    return _clean_json_response(response)
 
-    if isinstance(response, dict):
-        raw_text = response['message']['content'].strip()
-    elif hasattr(response, 'message'):
-        raw_text = response.message.content.strip()
-    else:
-        raw_text = str(response)
 
-    cleaned_text = raw_text.strip()
-    if cleaned_text.startswith("```json"):
-        cleaned_text = cleaned_text[7:]
-    if cleaned_text.startswith("```"):
-        cleaned_text = cleaned_text[3:]
-    if cleaned_text.endswith("```"):
-        cleaned_text = cleaned_text[:-3]
+def evaluate_code_review_with_ai(user, code_snippet, candidate_analysis):
+    """Évalue l'analyse et les corrections de code soumises par le candidat."""
+    client = _get_ollama_client(user)
 
-    return json.loads(cleaned_text.strip())
+    prompt = f"""
+En tant qu'Architecte Logiciel Senior, évalue l'analyse et la correction du code suivant par le candidat.
+
+--- EXTRAIT DE CODE SOUMIS ---
+{code_snippet}
+
+--- ANALYSE / CORRECTION DU CANDIDAT ---
+{candidate_analysis}
+
+Réponds EXCLUSIVEMENT sous la forme d'un objet JSON valide (JSON pur), sans blocs markdown ni texte superflu :
+{{
+  "score": 90,
+  "identified_bugs": ["Bug 1", "Bug 2"],
+  "code_quality_feedback": "Commentaire sur la propreté du code.",
+  "security_notes": "Remarques sur les failles potentielles.",
+  "improved_code": "Code corrigé si nécessaire"
+}}
+"""
+
+    messages = [
+        {'role': 'system', 'content': 'Tu es un expert en code review et en sécurité logicielle. Réponds uniquement en JSON pur sans texte additionnel.'},
+        {'role': 'user', 'content': prompt}
+    ]
+
+    response = client.chat(model='gpt-oss:120b-cloud', messages=messages)
+    return _clean_json_response(response)
+
+
+# ==========================================
+# MODULE ALGORITHMIQUE & COMPLEXITÉ
+# ==========================================
+
+def generate_algo_problem_with_ai(user, topic='Structures de données', difficulty='moyen'):
+    """Génère un problème d'algorithme avec contraintes de complexité."""
+    client = _get_ollama_client(user)
+    random_seed = random.randint(1000, 9999)
+
+    prompt = f"""
+Génère un défi algorithmique inédit.
+Thème : {topic}
+Niveau : {difficulty}
+Graine de variabilité : {random_seed}
+
+Réponds EXCLUSIVEMENT sous la forme d'un objet JSON valide (JSON pur), sans blocs markdown ni texte superflu :
+{{
+  "title": "Titre du problème",
+  "description": "Énoncé détaillé du problème avec les entrées/sorties attendues et exemples.",
+  "initial_code": "def solution(...):\n    # Votre code ici\n    pass",
+  "expected_time_complexity": "O(n)",
+  "expected_space_complexity": "O(1)"
+}}
+"""
+
+    messages = [
+        {'role': 'system', 'content': 'Tu es un concepteur d\'épreuves techniques en algorithmique. Réponds uniquement en JSON pur.'},
+        {'role': 'user', 'content': prompt}
+    ]
+
+    response = client.chat(model='gpt-oss:120b-cloud', messages=messages)
+    return _clean_json_response(response)
+
+
+def evaluate_algo_complexity_with_ai(user, problem_statement, candidate_code, time_complexity_claim, space_complexity_claim):
+    """Évalue la solution algorithmique du candidat et son analyse de complexité Big-O."""
+    client = _get_ollama_client(user)
+
+    prompt = f"""
+En tant qu'expert en algorithmique et structures de données, évalue la réponse et l'analyse du candidat.
+
+--- ÉNONCÉ DU PROBLÈME ---
+{problem_statement}
+
+--- CODE SOUMIS PAR LE CANDIDAT ---
+{candidate_code}
+
+--- COMPLEXITÉS AFFIRMÉES PAR LE CANDIDAT ---
+Complexité Temporelle estimée : {time_complexity_claim}
+Complexité Spatiale estimée : {space_complexity_claim}
+
+Réponds EXCLUSIVEMENT sous la forme d'un objet JSON valide (JSON pur), sans blocs markdown ni texte superflu :
+{{
+  "score": 85,
+  "correctness": "Analyse de la justesse et validité du code...",
+  "actual_time_complexity": "O(n)",
+  "actual_space_complexity": "O(1)",
+  "complexity_analysis": "Évaluation des complexités temporelle et spatiale affirmées par le candidat par rapport à la réalité du code.",
+  "optimizations": ["Conseil d'optimisation 1", "Conseil d'optimisation 2"]
+}}
+"""
+
+    messages = [
+        {'role': 'system', 'content': 'Tu es un expert en analyse d\'algorithmes et complexité Big-O. Réponds uniquement en JSON pur.'},
+        {'role': 'user', 'content': prompt}
+    ]
+
+    response = client.chat(model='gpt-oss:120b-cloud', messages=messages)
+    return _clean_json_response(response)

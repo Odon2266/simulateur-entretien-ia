@@ -25,14 +25,11 @@ from .services import (
     get_ai_response, 
     generate_quiz_with_ai, 
     evaluate_system_design_with_ai,
+    generate_code_review_with_ai,
     evaluate_code_review_with_ai,
+    generate_algo_problem_with_ai,
+    evaluate_algo_complexity_with_ai,
 )
-
-# Import optionnel si la fonction est déjà définie dans services.py
-try:
-    from .services import generate_code_review_with_ai
-except ImportError:
-    generate_code_review_with_ai = None
 
 
 # ==========================================
@@ -42,7 +39,7 @@ except ImportError:
 class GoogleLoginView(SocialLoginView):
     """Endpoint pour valider le token Google venant du frontend"""
     adapter_class = GoogleOAuth2Adapter
-    callback_url = "http://localhost:5173"  # URL de ton frontend React
+    callback_url = "http://localhost:5173"  # URL de votre frontend React
     client_class = OAuth2Client
 
     def get_response(self):
@@ -84,7 +81,7 @@ def update_ollama_key(request):
 
 
 # ==========================================
-# GENERATION DE QUIZ TECHNIQUE (OLLAMA)
+# GESTION DES RÉSULTATS D'ENTRAÎNEMENT
 # ==========================================
 
 class PracticeResultViewSet(viewsets.ModelViewSet):
@@ -97,6 +94,10 @@ class PracticeResultViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
+
+# ==========================================
+# GENERATION DE QUIZ TECHNIQUE (OLLAMA)
+# ==========================================
 
 class QuizGenerateView(APIView):
     permission_classes = [IsAuthenticated]
@@ -163,30 +164,10 @@ class GenerateCodeReviewView(APIView):
         language = request.data.get('language', 'python')
 
         try:
-            if generate_code_review_with_ai:
-                code_data = generate_code_review_with_ai(request.user, language=language)
-                return Response(code_data, status=status.HTTP_200_OK)
-
-            # Fallback par défaut si la fonction d'IA dédiée n'est pas dans services.py
-            sample_codes = {
-                'python': {
-                    'title': 'Injection SQL (Python)',
-                    'language': 'python',
-                    'code': "def get_user_data(request):\n    username = request.GET.get('username')\n    # Requête directe non sécurisée\n    query = f\"SELECT * FROM users WHERE username = '{username}'\"\n    cursor.execute(query)\n    return cursor.fetchall()"
-                },
-                'javascript': {
-                    'title': 'Memory Leak (React)',
-                    'language': 'javascript',
-                    'code': "import { useState, useEffect } from 'react';\n\nfunction LiveFeed() {\n  const [data, setData] = useState(null);\n\n  useEffect(() => {\n    const interval = setInterval(() => {\n      fetchData().then(res => setData(res));\n    }, 1000);\n    // Manque le cleanup dans le return du useEffect\n  }, []);\n\n  return <div>{data ? data.title : 'Loading...'}</div>;\n}"
-                },
-                'sql': {
-                    'title': 'Produit cartésien non filtré (SQL)',
-                    'language': 'sql',
-                    'code': "SELECT u.name, o.id\nFROM users u, orders o\nWHERE o.status = 'PENDING';"
-                }
-            }
-            data = sample_codes.get(language, sample_codes['python'])
-            return Response(data, status=status.HTTP_200_OK)
+            code_data = generate_code_review_with_ai(request.user, language=language)
+            return Response(code_data, status=status.HTTP_200_OK)
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({"error": f"Erreur de génération : {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -204,12 +185,72 @@ class EvaluateCodeReviewView(APIView):
         try:
             evaluation = evaluate_code_review_with_ai(request.user, code_snippet, candidate_analysis)
             return Response(evaluation, status=status.HTTP_200_OK)
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # ==========================================
-# VIEWSETS SIMULATEUR & CV (SÉCURISÉS)
+# ALGORITHMIQUE & COMPLEXITÉ (OLLAMA)
+# ==========================================
+
+class GenerateAlgoProblemView(APIView):
+    """Génère un problème d'algorithmique dynamique via IA"""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        topic = request.data.get('topic', 'Structures de données')
+        difficulty = request.data.get('difficulty', 'moyen')
+
+        try:
+            problem = generate_algo_problem_with_ai(
+                user=request.user, 
+                topic=topic, 
+                difficulty=difficulty
+            )
+            return Response(problem, status=status.HTTP_200_OK)
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error": f"Erreur de génération : {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class EvaluateAlgoComplexityView(APIView):
+    """Évalue le code d'algorithme et la complexité Big-O soumis par le candidat"""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        data = request.data
+
+        problem_statement = data.get('problem_statement', '')
+        candidate_code = data.get('candidate_code', '')
+        time_complexity = data.get('time_complexity', '')
+        space_complexity = data.get('space_complexity', '')
+
+        if not candidate_code or not problem_statement:
+            return Response(
+                {"error": "L'énoncé du problème et le code du candidat sont requis."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            evaluation = evaluate_algo_complexity_with_ai(
+                user=request.user,
+                problem_statement=problem_statement,
+                candidate_code=candidate_code,
+                time_complexity_claim=time_complexity,
+                space_complexity_claim=space_complexity
+            )
+            return Response(evaluation, status=status.HTTP_200_OK)
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error": f"Erreur d'évaluation : {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ==========================================
+# VIEWSETS SIMULATEUR & CV
 # ==========================================
 
 class CandidateProfileViewSet(viewsets.ModelViewSet):
@@ -265,11 +306,9 @@ class InterviewSessionViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        # Filtre les sessions pour ne retourner que celles de l'utilisateur connecté
         return InterviewSession.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
-        # Associe automatiquement l'utilisateur connecté à la nouvelle session
         serializer.save(user=self.request.user)
 
     @action(detail=True, methods=['post'])
@@ -283,17 +322,14 @@ class InterviewSessionViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # 1. Enregistrer le message du candidat
         candidate_msg = Message.objects.create(
             session=session,
             sender='CANDIDATE',
             content=user_text
         )
 
-        # 2. Obtenir la réponse générée par l'IA
         ai_text = get_ai_response(session, user_message=user_text)
 
-        # 3. Enregistrer la réponse du recruteur IA
         ai_msg = Message.objects.create(
             session=session,
             sender='RECRUITER',

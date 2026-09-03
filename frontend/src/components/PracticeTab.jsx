@@ -10,6 +10,7 @@ import {
 import QuickQuiz from './QuizPractice';
 import SystemDesignPractice from './SystemDesignPractice';
 import CodeReviewPractice from './CodeReviewPractice';
+import AlgoPractice from './AlgoPractice';
 
 export default function PracticeTab() {
   const [activeModule, setActiveModule] = useState(null);
@@ -55,7 +56,7 @@ export default function PracticeTab() {
       icon: Zap,
       color: 'from-amber-500 to-orange-600',
       badgeColor: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-      status: 'À venir',
+      status: 'Disponible',
       tags: ['Data Structures', 'Big O', 'Logic', 'Optimization'],
       level: 'Tous niveaux'
     }
@@ -71,6 +72,10 @@ export default function PracticeTab() {
 
   if (activeModule === 'code-review') {
     return <CodeReviewPractice onBack={() => setActiveModule(null)} />;
+  }
+
+  if (activeModule === 'algo') {
+    return <AlgoPractice onBack={() => setActiveModule(null)} />;
   }
 
   return (
@@ -92,7 +97,7 @@ export default function PracticeTab() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {modules.map((mod) => {
           const Icon = mod.icon;
-          const isInteractive = mod.id === 'technical' || mod.id === 'system-design' || mod.id === 'code-review';
+          const isInteractive = mod.status === 'Disponible';
 
           return (
             <div

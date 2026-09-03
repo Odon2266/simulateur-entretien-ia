@@ -11,7 +11,9 @@ from .views import (
     PracticeResultViewSet,
     EvaluateSystemDesignView,
     EvaluateCodeReviewView,
-    GenerateCodeReviewView,  # <--- Ajouté ici
+    GenerateCodeReviewView,
+    GenerateAlgoProblemView,
+    EvaluateAlgoComplexityView,
 )
 
 router = DefaultRouter()
@@ -40,4 +42,8 @@ urlpatterns = [
     # Endpoints pour Code Review (Génération + Évaluation)
     path('generate-code-review/', GenerateCodeReviewView.as_view(), name='generate-code-review'),
     path('evaluate-code-review/', EvaluateCodeReviewView.as_view(), name='evaluate-code-review'),
+
+    # Endpoints pour Algorithmique & Complexité (Génération + Évaluation)
+    path('generate-algo/', GenerateAlgoProblemView.as_view(), name='generate-algo'),
+    path('evaluate-algo/', EvaluateAlgoComplexityView.as_view(), name='evaluate-algo'),
 ]
