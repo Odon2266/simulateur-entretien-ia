@@ -7,7 +7,6 @@ import {
   History, 
   LogOut, 
   Mic, 
-  Zap, 
   ChevronRight,
   CheckCircle2,
   Key,
@@ -172,29 +171,37 @@ export default function Dashboard({ user, userEmail = "fidinjaharisoaodon@gmail.
     }
   };
 
+  const navItems = [
+    { id: 'dashboard', label: 'Vue générale', icon: LayoutDashboard },
+    { id: 'simulation', label: 'Simulation IA', icon: PlayCircle },
+    { id: 'practice', label: 'Entraînement', icon: Dumbbell },
+    { id: 'history', label: 'Historique', icon: History },
+  ];
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-cyan-500 selection:text-slate-950">
       
       {/* Top Bar Navigation */}
-      <header className="h-16 border-b border-slate-800/80 bg-slate-900/60 backdrop-blur-xl px-6 flex items-center justify-between sticky top-0 z-40">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-emerald-400 p-[1px] shadow-lg shadow-cyan-500/10">
+      <header className="h-16 border-b border-slate-800/80 bg-slate-900/60 backdrop-blur-xl px-4 sm:px-6 flex items-center justify-between sticky top-0 z-40">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-emerald-400 p-[1px] shadow-lg shadow-cyan-500/10">
             <div className="w-full h-full bg-slate-950 rounded-[11px] flex items-center justify-center">
-              <Mic className="w-5 h-5 text-cyan-400" />
+              <Mic className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-400" />
             </div>
           </div>
-          <span className="font-bold text-base tracking-tight text-white">
+          <span className="font-bold text-sm sm:text-base tracking-tight text-white">
             DevInterview<span className="text-cyan-400">.lab</span>
           </span>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
           <button
             onClick={() => setShowKeyModal(true)}
-            className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60 text-slate-300 text-xs transition-all"
+            className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-full bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60 text-slate-300 text-xs transition-all"
+            title="Clé Ollama"
           >
             <Key className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Clé Ollama</span>
+            <span className="hidden sm:inline">Clé Ollama</span>
           </button>
 
           <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs">
@@ -204,21 +211,21 @@ export default function Dashboard({ user, userEmail = "fidinjaharisoaodon@gmail.
 
           <div className="h-4 w-[1px] bg-slate-800 hidden sm:block"></div>
 
-          {/* Profil Utilisateur Google */}
-          <div className="flex items-center gap-3">
+          {/* Profil Utilisateur */}
+          <div className="flex items-center gap-2 sm:gap-3">
             <div className="text-right hidden sm:block">
-              <p className="text-xs font-semibold text-slate-200 capitalize">{displayName}</p>
-              <p className="text-[10px] text-slate-500">{email}</p>
+              <p className="text-xs font-semibold text-slate-200 capitalize truncate max-w-[120px]">{displayName}</p>
+              <p className="text-[10px] text-slate-500 truncate max-w-[120px]">{email}</p>
             </div>
 
             {avatarUrl ? (
               <img 
                 src={avatarUrl} 
                 alt={displayName} 
-                className="w-9 h-9 rounded-xl border border-slate-700 object-cover shadow-inner"
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl border border-slate-700 object-cover shadow-inner"
               />
             ) : (
-              <div className="w-9 h-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-xs text-cyan-400 shadow-inner">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-xs text-cyan-400 shadow-inner">
                 {displayName[0].toUpperCase()}
               </div>
             )}
@@ -226,7 +233,7 @@ export default function Dashboard({ user, userEmail = "fidinjaharisoaodon@gmail.
             <button 
               onClick={onLogout}
               title="Déconnexion"
-              className="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-xl transition-all"
+              className="p-1.5 sm:p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-xl transition-all"
             >
               <LogOut className="w-4 h-4" />
             </button>
@@ -236,15 +243,10 @@ export default function Dashboard({ user, userEmail = "fidinjaharisoaodon@gmail.
 
       <div className="flex-1 flex overflow-hidden">
         
-        {/* Navigation Latérale */}
-        <aside className="w-60 border-r border-slate-800/80 bg-slate-900/30 p-4 space-y-6 hidden md:flex flex-col justify-between">
+        {/* Navigation Latérale - Desktop */}
+        <aside className="w-60 border-r border-slate-800/80 bg-slate-900/30 p-4 hidden md:flex flex-col justify-between">
           <nav className="space-y-1.5">
-            {[
-              { id: 'dashboard', label: 'Vue générale', icon: LayoutDashboard },
-              { id: 'simulation', label: 'Simulation IA', icon: PlayCircle },
-              { id: 'practice', label: 'Entraînement', icon: Dumbbell },
-              { id: 'history', label: 'Historique', icon: History },
-            ].map((item) => {
+            {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id && !activeSession;
               return (
@@ -266,26 +268,18 @@ export default function Dashboard({ user, userEmail = "fidinjaharisoaodon@gmail.
               );
             })}
           </nav>
-
-          <div className="p-3 bg-slate-900/80 border border-slate-800 rounded-xl space-y-2">
-            <div className="flex items-center gap-2 text-xs font-semibold text-amber-400">
-              <Zap className="w-4 h-4 fill-amber-400" />
-              <span>Compte Gratuit</span>
-            </div>
-            <p className="text-[10px] text-slate-400">3 simulations restantes ce mois-ci.</p>
-          </div>
         </aside>
 
         {/* Zone de Contenu Principal */}
-        <main className="flex-1 p-6 md:p-8 overflow-y-auto space-y-8">
+        <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto space-y-6 sm:space-y-8 pb-24 md:pb-8">
           {activeSession ? (
             <div className="h-full flex flex-col">
-              <div className="mb-4 flex items-center gap-2 text-sm text-slate-400">
+              <div className="mb-4 flex items-center gap-2 text-xs sm:text-sm text-slate-400">
                 <button onClick={() => { setActiveSession(null); fetchSessions(); }} className="hover:text-white transition-colors">
                   Vue générale
                 </button>
                 <ChevronRight className="w-4 h-4" />
-                <span className="text-cyan-400">Entretien : {activeSession.job_title}</span>
+                <span className="text-cyan-400 truncate">Entretien : {activeSession.job_title}</span>
               </div>
               <SimulationChat 
                 sessionData={activeSession} 
@@ -307,14 +301,14 @@ export default function Dashboard({ user, userEmail = "fidinjaharisoaodon@gmail.
 
               {activeTab === 'simulation' && (
                 <div className="space-y-6">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                      <h2 className="text-xl font-bold text-white">Simulations d'Entretien IA</h2>
+                      <h2 className="text-lg sm:text-xl font-bold text-white">Simulations d'Entretien IA</h2>
                       <p className="text-xs text-slate-400">Lancez une nouvelle session ou rejoignez une simulation en cours.</p>
                     </div>
                     <button 
                       onClick={() => setShowNewModal(true)}
-                      className="flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-emerald-500 text-slate-950 text-xs font-bold px-4 py-2.5 rounded-xl hover:opacity-90 transition-all shadow-lg shadow-cyan-500/20"
+                      className="self-start sm:self-auto flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-emerald-500 text-slate-950 text-xs font-bold px-4 py-2.5 rounded-xl hover:opacity-90 transition-all shadow-lg shadow-cyan-500/20"
                     >
                       <PlayCircle className="w-4 h-4 fill-slate-950" />
                       <span>Nouvelle Session</span>
@@ -327,7 +321,7 @@ export default function Dashboard({ user, userEmail = "fidinjaharisoaodon@gmail.
                       <span className="text-xs">Chargement des sessions...</span>
                     </div>
                   ) : sessions.length === 0 ? (
-                    <div className="border border-dashed border-slate-800 rounded-2xl p-12 text-center space-y-4 bg-slate-900/20">
+                    <div className="border border-dashed border-slate-800 rounded-2xl p-8 sm:p-12 text-center space-y-4 bg-slate-900/20">
                       <div className="w-12 h-12 rounded-2xl bg-slate-800/80 flex items-center justify-center mx-auto text-cyan-400">
                         <PlayCircle className="w-6 h-6" />
                       </div>
@@ -406,10 +400,35 @@ export default function Dashboard({ user, userEmail = "fidinjaharisoaodon@gmail.
         </main>
       </div>
 
+      {/* Navigation Inférieure - Mobile / Smartphone */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 border-t border-slate-800/80 backdrop-blur-xl px-2 py-2 flex justify-around items-center shadow-2xl">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = activeTab === item.id && !activeSession;
+          return (
+            <button
+              key={item.id}
+              onClick={() => {
+                setActiveTab(item.id);
+                setActiveSession(null);
+              }}
+              className={`flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl transition-all ${
+                isActive 
+                  ? 'text-cyan-400 font-semibold bg-cyan-500/10' 
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Icon className="w-5 h-5" />
+              <span className="text-[10px]">{item.label}</span>
+            </button>
+          );
+        })}
+      </nav>
+
       {/* Modal Nouvel Entretien avec Upload CV */}
       {showNewModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 space-y-6 shadow-2xl relative">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-5 sm:p-6 space-y-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
             <button 
               onClick={() => setShowNewModal(false)}
               className="absolute top-4 right-4 p-1 text-slate-400 hover:text-white rounded-lg"
@@ -418,7 +437,7 @@ export default function Dashboard({ user, userEmail = "fidinjaharisoaodon@gmail.
             </button>
 
             <div className="space-y-1">
-              <h3 className="text-lg font-bold text-white">Nouvel Entretien</h3>
+              <h3 className="text-base sm:text-lg font-bold text-white">Nouvel Entretien</h3>
               <p className="text-xs text-slate-400">Ajoutez votre CV et le poste pour adapter les questions de l'IA.</p>
             </div>
 
@@ -436,7 +455,7 @@ export default function Dashboard({ user, userEmail = "fidinjaharisoaodon@gmail.
                   {cvFile ? (
                     <div className="flex items-center gap-2 text-cyan-400 font-medium text-xs">
                       <FileText className="w-4 h-4" />
-                      <span className="truncate max-w-[200px]">{cvFile.name}</span>
+                      <span className="truncate max-w-[180px]">{cvFile.name}</span>
                       <CheckCircle2 className="w-4 h-4 text-emerald-400 ml-1" />
                     </div>
                   ) : (
@@ -493,7 +512,7 @@ export default function Dashboard({ user, userEmail = "fidinjaharisoaodon@gmail.
       {/* Modal Clé Ollama */}
       {showKeyModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 space-y-6 shadow-2xl relative">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-5 sm:p-6 space-y-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
             <button 
               onClick={() => setShowKeyModal(false)}
               className="absolute top-4 right-4 p-1 text-slate-400 hover:text-white rounded-lg"
@@ -502,7 +521,7 @@ export default function Dashboard({ user, userEmail = "fidinjaharisoaodon@gmail.
             </button>
 
             <div className="space-y-1">
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+              <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
                 <Key className="w-5 h-5 text-cyan-400" /> Clé Ollama / API
               </h3>
               <p className="text-xs text-slate-400">Configurez votre clé d'accès pour exécuter les simulations via Ollama.</p>
