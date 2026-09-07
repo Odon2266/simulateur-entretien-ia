@@ -71,3 +71,17 @@ class PracticeResult(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.category} : {self.score}/{self.total_questions}"
+
+
+#dernier fonctionnalité
+class SiteVisit(models.Model):
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(null=True, blank=True)
+    path = models.CharField(max_length=255, default='/')
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-timestamp']
+
+    def __str__(self):
+        return f"Visite sur {self.path} le {self.timestamp.strftime('%Y-%m-%d %H:%M')}"

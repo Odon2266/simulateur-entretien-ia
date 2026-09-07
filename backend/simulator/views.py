@@ -1,18 +1,29 @@
+from datetime import timedelta
 import pypdf
+from django.contrib.auth import authenticate
+from django.contrib.auth.models import User
+from django.utils import timezone
 from rest_framework import viewsets, status
 from rest_framework.views import APIView
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
-from django.contrib.auth.models import User
+from rest_framework.authtoken.models import Token
 
 # Imports pour Allauth & Google OAuth
 from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
 from allauth.socialaccount.providers.oauth2.client import OAuth2Client
 from dj_rest_auth.registration.views import SocialLoginView
 
-from .models import CandidateProfile, InterviewSession, Message, EvaluationReport, PracticeResult
+from .models import (
+    CandidateProfile, 
+    InterviewSession, 
+    Message, 
+    EvaluationReport, 
+    PracticeResult,
+    SiteVisit
+)
 from .serializers import (
     UserSerializer,
     CandidateProfileSerializer,
@@ -36,6 +47,46 @@ from .services import (
 # AUTHENTIFICATION & PROFIL
 # ==========================================
 
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def custom_login_view(request):
+    """
+    Endpoint personnalisé pour la connexion.
+    Retourne le token et les droits d'administration (is_staff / is_superuser).
+    """
+    username_or_email = request.data.get('username') or request.data.get('email')
+    password = request.data.get('password')
+
+    if not username_or_email or not password:
+        return Response({'detail': 'Veuillez fournir un identifiant et un mot de passe.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # 1. Tentative d'authentification par username
+    user = authenticate(request, username=username_or_email, password=password)
+
+    # 2. Si échoué et contient un '@', recherche par email
+    if user is None and '@' in str(username_or_email):
+        try:
+            user_obj = User.objects.get(email=username_or_email)
+            user = authenticate(request, username=user_obj.username, password=password)
+        except User.DoesNotExist:
+            user = None
+
+    if user is not None:
+        token, _ = Token.objects.get_or_create(user=user)
+        return Response({
+            'token': token.key,
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'is_staff': user.is_staff,
+                'is_superuser': user.is_superuser
+            }
+        }, status=status.HTTP_200_OK)
+
+    return Response({'detail': 'Identifiants invalides.'}, status=status.HTTP_400_BAD_REQUEST)
+
+
 class GoogleLoginView(SocialLoginView):
     """Endpoint pour valider le token Google venant du frontend"""
     adapter_class = GoogleOAuth2Adapter
@@ -43,23 +94,19 @@ class GoogleLoginView(SocialLoginView):
     client_class = OAuth2Client
 
     def get_response(self):
-        # 1. Laisse dj_rest_auth valider le token et faire l'insertion SQL (User)
         response = super().get_response()
-        
-        # 2. Récupère l'utilisateur qui vient d'être connecté/créé
         user = self.user
         
-        # 3. Sécurité : On s'assure que son CandidateProfile est créé
         CandidateProfile.objects.get_or_create(user=user)
 
-        # 4. Construction du nom complet depuis la base de données
         full_name = f"{user.first_name} {user.last_name}".strip() or user.username
 
-        # 5. Injection des données dans la réponse JSON
         response.data['user'] = {
             'id': user.id,
             'email': user.email,
             'name': full_name,
+            'is_staff': user.is_staff,
+            'is_superuser': user.is_superuser
         }
         
         return response
@@ -272,10 +319,8 @@ class CandidateProfileViewSet(viewsets.ModelViewSet):
         if not cv_file:
             return Response({"error": "Aucun fichier CV n'a été fourni."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # 1. Sauvegarde du fichier PDF dans le modèle
         profile.cv_file = cv_file
 
-        # 2. Extraction automatique du texte PDF avec pypdf
         try:
             reader = pypdf.PdfReader(cv_file)
             extracted_text = ""
@@ -352,3 +397,49 @@ class EvaluationReportViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = EvaluationReport.objects.all()
     serializer_class = EvaluationReportSerializer
     permission_classes = [IsAuthenticated]
+
+
+# ==========================================
+# STATISTIQUES & VISITES SITE
+# ==========================================
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def track_visit(request):
+    """Enregistre une visite envoyée par le frontend"""
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0].strip()
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+        
+    user_agent = request.META.get('HTTP_USER_AGENT', '')
+    path = request.data.get('path', '/')
+
+    SiteVisit.objects.create(
+        ip_address=ip,
+        user_agent=user_agent,
+        path=path
+    )
+    return Response({'status': 'tracked'})
+
+
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
+def visit_stats(request):
+    """Renvoie les statistiques cumulées pour les administrateurs"""
+    now = timezone.now()
+    today = now.date()
+    seven_days_ago = now - timedelta(days=7)
+
+    total_visits = SiteVisit.objects.count()
+    today_visits = SiteVisit.objects.filter(timestamp__date=today).count()
+    week_visits = SiteVisit.objects.filter(timestamp__gte=seven_days_ago).count()
+    unique_visitors = SiteVisit.objects.values('ip_address').distinct().count()
+
+    return Response({
+        'total_visits': total_visits,
+        'today_visits': today_visits,
+        'week_visits': week_visits,
+        'unique_visitors': unique_visitors,
+    })

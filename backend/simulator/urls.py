@@ -6,6 +6,7 @@ from .views import (
     MessageViewSet,
     EvaluationReportViewSet,
     GoogleLoginView,
+    custom_login_view,
     update_ollama_key,
     QuizGenerateView,
     PracticeResultViewSet,
@@ -14,6 +15,8 @@ from .views import (
     GenerateCodeReviewView,
     GenerateAlgoProblemView,
     EvaluateAlgoComplexityView,
+    track_visit,
+    visit_stats,
 )
 
 router = DefaultRouter()
@@ -27,6 +30,9 @@ urlpatterns = [
     # Routes du Router DRF (ex: /api/profiles/upload_cv/, /api/sessions/, etc.)
     path('', include(router.urls)),
     
+    # Endpoint de connexion personnalisé
+    path('auth/custom-login/', custom_login_view, name='custom-login'),
+
     # Endpoint pour se connecter avec Google
     path('auth/google/', GoogleLoginView.as_view(), name='google_login'),
     
@@ -46,4 +52,8 @@ urlpatterns = [
     # Endpoints pour Algorithmique & Complexité (Génération + Évaluation)
     path('generate-algo/', GenerateAlgoProblemView.as_view(), name='generate-algo'),
     path('evaluate-algo/', EvaluateAlgoComplexityView.as_view(), name='evaluate-algo'),
+
+    # Endpoints pour le suivi des visites et les statistiques
+    path('track-visit/', track_visit, name='track-visit'),
+    path('admin/stats/', visit_stats, name='visit-stats'),
 ]

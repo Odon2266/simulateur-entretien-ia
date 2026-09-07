@@ -157,6 +157,7 @@ ACCOUNT_SIGNUP_FIELDS = ['email*', 'username*', 'password1*', 'password2*']
 
 # Configuration Allauth (Google OAuth)
 AUTHENTICATION_BACKENDS = [
+    'simulator.backends.EmailBackend',
     'django.contrib.auth.backends.ModelBackend',
     'allauth.account.auth_backends.AuthenticationBackend',
 ]
