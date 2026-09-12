@@ -9,11 +9,14 @@ https://docs.djangoproject.com/en/5.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
-import os
-from dotenv import load_dotenv
-from pathlib import Path
 
+import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Charger les variables d'environnement depuis le fichier .env
 load_dotenv()
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -22,12 +25,19 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-ye-w8(3$gu6vu49($)0@gnw6ozk7vo(9h=pmm8x*-xw-*hbu%9'
+SECRET_KEY = os.getenv(
+    'SECRET_KEY',
+    'django-insecure-ye-w8(3$gu6vu49($)0@gnw6ozk7vo(9h=pmm8x*-xw-*hbu%9'
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 't')
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1,backend').split(',')
+    if host.strip()
+]
 
 
 # Application definition
@@ -42,7 +52,7 @@ INSTALLED_APPS = [
 
     # Third-party packages
     'rest_framework',
-    'rest_framework.authtoken',  # <--- À AJOUTER
+    'rest_framework.authtoken',
     'dj_rest_auth',
     'corsheaders',
     'django.contrib.sites',  # Requis par django-allauth
@@ -141,8 +151,18 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Configuration CORS (pour autoriser le frontend en dev)
-CORS_ALLOW_ALL_ORIGINS = True
+
+# Configuration CORS & Frontend
+CORS_ALLOW_ALL_ORIGINS = os.getenv('CORS_ALLOW_ALL_ORIGINS', 'True').lower() in ('true', '1', 't')
+
+CORS_ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:8080,http://localhost:5173').split(',')
+    if origin.strip()
+]
+
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:8080')
+
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
@@ -181,6 +201,6 @@ SOCIALACCOUNT_PROVIDERS = {
 
 # Configuration dj-rest-auth
 REST_AUTH = {
-    'USE_JWT': False,  # On utilise TokenAuthentication basique d'après ton DRF setup
+    'USE_JWT': False,
     'SESSION_LOGIN': False,
 }
