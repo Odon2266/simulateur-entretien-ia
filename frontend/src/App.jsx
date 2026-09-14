@@ -36,7 +36,7 @@ export default function App() {
         const parsedUser = JSON.parse(savedUserInfo);
         setUser(parsedUser);
 
-        // 🔍 Debug : vérifie dans la console ce que contient réellement l'objet utilisateur
+        // Debug : vérifie dans la console ce que contient réellement l'objet utilisateur
         console.debug('[Auth] Utilisateur restauré depuis localStorage :', parsedUser);
 
         // Redirection automatique vers Admin ou Dashboard selon le rôle
