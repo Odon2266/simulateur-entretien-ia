@@ -11,10 +11,9 @@ WORKDIR /app
 # 4. Copier d'abord le fichier des dépendances pour bénéficier du cache Docker
 COPY requirements.txt /app/
 
-# 5. Installer les dépendances Python
+# 5. Installer les dépendances Python avec un timeout élargi
 RUN pip install --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
-
+    pip install --default-timeout=100 --no-cache-dir -r requirements.txt
 # 6. Copier tout le reste du code source dans le conteneur
 COPY . /app/
 
