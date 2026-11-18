@@ -21,4 +21,5 @@ COPY . /app/
 EXPOSE 8000
 
 # 8. Commande par défaut à exécuter quand le conteneur démarre
-CMD ["sh", "-c", "python manage.py migrate --noinput && python manage.py collectstatic --noinput && python manage.py runserver 0.0.0.0:8000"]
+# 8. Commande par défaut à exécuter quand le conteneur démarre
+CMD ["sh", "-c", "python manage.py migrate --noinput && python manage.py collectstatic --noinput && python manage.py createsuperuser --noinput || true && python manage.py runserver 0.0.0.0:8000"]
