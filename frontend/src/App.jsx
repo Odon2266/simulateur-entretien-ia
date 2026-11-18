@@ -4,6 +4,9 @@ import AuthModal from './components/AuthModal';
 import Dashboard from './components/Dashboard';
 import AdminStats from './components/AdminStats';
 
+// 🌍 Définition propre de l'URL de base de l'API (prend Vercel ou bascule sur localhost en dev)
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
 // Normalise is_staff / is_superuser : gère les cas où l'API renvoie
 // un booléen (true/false) ou une chaîne ("true"/"false") selon le serializer Django.
 function isAdminUser(userData) {
@@ -19,7 +22,7 @@ export default function App() {
 
   // 1. Enregistrement automatique de la visite
   useEffect(() => {
-    fetch('http://localhost:8000/api/track-visit/', {
+    fetch(`${API_URL}/api/track-visit/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ path: window.location.pathname }),
