@@ -22,6 +22,9 @@ import OverviewTab from './OverviewTab';
 import PracticeTab from './PracticeTab';
 import HistoryTab from './HistoryTab';
 
+const ROOT_API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE_URL = `${ROOT_API_URL.replace(/\/+$/, '')}/api`;
+
 export default function Dashboard({ user, userEmail = "fidinjaharisoaodon@gmail.com", onLogout }) {
   const [activeTab, setActiveTab] = useState('dashboard');
 
@@ -49,8 +52,6 @@ export default function Dashboard({ user, userEmail = "fidinjaharisoaodon@gmail.
   const [isSavingKey, setIsSavingKey] = useState(false);
   const [statusMessage, setStatusMessage] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
-
-  const API_BASE_URL = 'http://localhost:8000/api';
 
   const getToken = () => localStorage.getItem('authToken') || localStorage.getItem('access_token');
 

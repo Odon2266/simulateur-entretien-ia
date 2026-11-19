@@ -3,6 +3,8 @@ import { Terminal, Lock, Mail, Eye, EyeOff, ArrowLeft, Shield, AlertCircle } fro
 import { useGoogleLogin } from '@react-oauth/google';
 import axios from 'axios';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
 export default function AuthModal({ onBack, onLoginSuccess }) {
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
@@ -26,8 +28,8 @@ export default function AuthModal({ onBack, onLoginSuccess }) {
 
     try {
       const endpoint = isLogin 
-        ? 'http://localhost:8000/api/auth/custom-login/' 
-        : 'http://localhost:8000/api/auth/register/';
+        ? `${API_URL}/api/auth/custom-login/` 
+        : `${API_URL}/api/auth/register/`;
 
       const payload = isLogin 
         ? { username: formData.username, password: formData.password } 
@@ -65,7 +67,7 @@ export default function AuthModal({ onBack, onLoginSuccess }) {
       setErrorMessage('');
       setLoading(true);
       try {
-        const response = await axios.post('http://localhost:8000/api/auth/google/', {
+        const response = await axios.post(`${API_URL}/api/auth/google/`, {
           access_token: tokenResponse.access_token,
         });
 
