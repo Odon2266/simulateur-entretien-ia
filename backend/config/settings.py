@@ -36,7 +36,7 @@ DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 't')
 
 ALLOWED_HOSTS = [
     host.strip()
-    for host in os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1,backend').split(',')
+    for host in os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1,backend,.onrender.com').split(',')
     if host.strip()
 ]
 
@@ -112,6 +112,7 @@ DATABASES = {
         conn_max_age=600,
     )
 }
+
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 
@@ -147,7 +148,6 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 
-
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
@@ -155,15 +155,20 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 # Configuration CORS & Frontend
-CORS_ALLOW_ALL_ORIGINS = os.getenv('CORS_ALLOW_ALL_ORIGINS', 'True').lower() in ('true', '1', 't')
+CORS_ALLOW_ALL_ORIGINS = os.getenv('CORS_ALLOW_ALL_ORIGINS', 'False').lower() in ('true', '1', 't')
 
 CORS_ALLOWED_ORIGINS = [
     origin.strip()
-    for origin in os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:8080,http://localhost:5173').split(',')
+    for origin in os.getenv(
+        'CORS_ALLOWED_ORIGINS',
+        'https://simulateur-entretien-ia.vercel.app,http://localhost:5173,http://localhost:8080'
+    ).split(',')
     if origin.strip()
 ]
 
-FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:8080')
+CORS_ALLOW_CREDENTIALS = True
+
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'https://simulateur-entretien-ia.vercel.app')
 
 
 REST_FRAMEWORK = {
@@ -186,6 +191,7 @@ AUTHENTICATION_BACKENDS = [
 
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
+
 # Configuration Google OAuth pour Allauth
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
@@ -204,6 +210,7 @@ SOCIALACCOUNT_PROVIDERS = {
         'OAUTH_PKCE_ENABLED': True,
     }
 }
+
 # Configuration dj-rest-auth
 REST_AUTH = {
     'USE_JWT': False,
@@ -212,6 +219,9 @@ REST_AUTH = {
 
 CSRF_TRUSTED_ORIGINS = [
     origin.strip()
-    for origin in os.getenv('CSRF_TRUSTED_ORIGINS', 'https://*.onrender.com').split(',')
+    for origin in os.getenv(
+        'CSRF_TRUSTED_ORIGINS',
+        'https://simulateur-entretien-ia.vercel.app,https://*.onrender.com'
+    ).split(',')
     if origin.strip()
 ]
